@@ -48,7 +48,7 @@ def game_loop():
         elif event.type == pygame.MOUSEBUTTONUP:
             if event.button == 1:
                 # Check if ships are selected
-                if dragged == False:
+                if not dragged:
                     game_map.check_selection_click(clicked_mouse_position)
 
                 elif clicked_mouse_position is not None:
@@ -70,6 +70,7 @@ def game_loop():
                 #  update the location of the mouse for get_rel
                 pygame.mouse.get_rel()
 
+        game_map.update()
         visualiser.render_game(clicked_mouse_position)
 
 

@@ -57,13 +57,21 @@ class Visualiser:
         screen_point = self.game_map.true_to_screen((500, 500))
         pygame.draw.rect(self.screen, (255, 0, 0), (screen_point[0], screen_point[1], 50*zoom, 50*zoom))
 
-        # Draw spaceships
+        # Draw all space objects
         for space_object in self.game_map.space_objects:
-            space_object.update()
             body = space_object.body
+            if space_object.faction == 'player':
+                hull_colour = (0, 0, 255)
+                turret_colour = (0, 100, 255)
+            elif space_object.faction == 'enemy':
+                hull_colour = (255, 0, 0)
+                turret_colour = (255, 70, 0)
+            elif space_object.faction == 'neutral':
+                hull_colour = (65, 65, 65)
+                turret_colour = (30, 30, 30)
             for y in range(len(body)):
                 for x in range(len(body[y])):
-                    if body[y][x] == 1:
+                    if body[y][x] != 0:
                         top_left_x = self.cell_size*(x-len(body[0])/2)
                         top_left_y = self.cell_size*(y-len(body)/2)
                         true_point_1 = space_object.ship_to_true((top_left_x, top_left_y))
@@ -74,7 +82,12 @@ class Visualiser:
                                          self.game_map.true_to_screen(true_point_2),
                                          self.game_map.true_to_screen(true_point_3),
                                          self.game_map.true_to_screen(true_point_4)]
-                        pygame.draw.polygon(self.screen, (0, 0, 255), screen_points)
+                        if body[y][x] == 1:
+                            pygame.draw.polygon(self.screen, hull_colour, screen_points)
+                        elif body[y][x] == 3:
+                            pygame.draw.polygon(self.screen, turret_colour, screen_points)
+
+            # Draw selection circle and destination line if starship selected
             if isinstance(space_object, StarShip) and space_object.selected:
                 true_position = self.game_map.true_to_screen(space_object.position)
                 pygame.draw.circle(self.screen, (0, 255, 0), true_position, int(space_object.hit_check_range*zoom), 2)
@@ -82,6 +95,15 @@ class Visualiser:
                     true_destination = self.game_map.true_to_screen(space_object.destination)
                     pygame.draw.line(self.highlight_screen, (0, 255, 0), true_position, true_destination)
                     pygame.draw.circle(self.highlight_screen, (0, 255, 0), true_destination, 6, 1)
+
+        # Draw all bullets
+            for bullet in self.game_map.bullets:
+                if bullet.faction == 'player':
+                    bullet_colour = (0, 70, 112)
+                elif bullet.faction == 'enemy':
+                    bullet_colour = (210, 0, 64)
+                true_position = self.game_map.true_to_screen(bullet.position)
+                pygame.draw.circle(self.screen, bullet_colour, true_position, int(3 * zoom))
 
         # Draw highlight box
         if clicked_mouse_position is not None:
