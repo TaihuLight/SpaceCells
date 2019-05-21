@@ -55,9 +55,9 @@ class SpaceObject:
                 if number != 0:
                     self.cells += 1
 
-    def ship_to_true(self, point: Tuple[int, int]) -> Tuple[int, int]:
-        x = int(point[0] * cos(self.rotation) - point[1] * sin(self.rotation) + self.position[0])
-        y = int(point[1] * cos(self.rotation) + point[0] * sin(self.rotation) + self.position[1])
+    def ship_to_true(self, point: Tuple[int, int]) -> Tuple[float, float]:
+        x = point[0] * cos(self.rotation) - point[1] * sin(self.rotation) + int(self.position[0])
+        y = point[1] * cos(self.rotation) + point[0] * sin(self.rotation) + int(self.position[1])
         return x, y
 
     def true_to_ship(self, point: Tuple[int, int]) -> Tuple[int, int]:
@@ -74,14 +74,17 @@ class SpaceObject:
             if bullet.faction != self.faction and hypot(bullet.position[0] - self.position[0],
                                                         bullet.position[1] - self.position[1]) < self.hit_check_range:
                 ship_bullet_position = self.true_to_ship(bullet.position)
-                x = int((ship_bullet_position[0] - cell_size // 2) / cell_size + len(self.body[0]) / 2)
-                y = int((ship_bullet_position[1] - cell_size // 2) / cell_size + len(self.body) / 2)
+                x = (ship_bullet_position[0] + int(len(self.body[0]) / 2 * cell_size)) // cell_size
+                y = (ship_bullet_position[1] + int(len(self.body) / 2 * cell_size)) // cell_size
                 if 0 <= y < len(self.body) and 0 <= x < len(self.body[0]):
                     if self.body[y][x] == 1:
                         self.body[y][x] = 0
                         if self.hull is not None:
                             self.hull -= 1
                         self.cells -= 1
+                        bullets.remove(bullet)
+                    elif self.body[y][x] == 2:
+                        self.body[y][x] = 1
                         bullets.remove(bullet)
                     elif self.body[y][x] == 3:
                         del self.turrets[(y, x)]
@@ -130,7 +133,7 @@ class StarShip(SpaceObject):
         self.targets = []
         for i, sublist in enumerate(self.body):
             for j, number in enumerate(sublist):
-                if number == 1:
+                if number == 1 or number == 2:
                     self.hull += 1
                 if number == 3:
                     self.turrets[i, j] = randint(0, turret_cooldown)

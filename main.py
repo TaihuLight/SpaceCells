@@ -1,11 +1,20 @@
+
+
 # Commit message change
 import pygame
 from visualiser import Visualiser
 from game_map import GameMap
 import time
+import cProfile, pstats, io
+from pstats import SortKey
 
 
 def game_loop():
+    """
+    pr = cProfile.Profile()
+    pr.enable()
+    tick = 0
+    """
     game_running = True
     game_map = GameMap(2000, 1600, 900)
     visualiser = Visualiser(1600, 900, game_map, 10)
@@ -16,6 +25,7 @@ def game_loop():
     last_frame_time = time.time()
     panned = False
     dragged = False
+    paused = False
 
     # The game loop
     while game_running:
@@ -60,6 +70,13 @@ def game_loop():
                     game_map.set_destination()
             panned = False
 
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                if paused:
+                    paused = False
+                else:
+                    paused = True
+
         elif event.type == pygame.MOUSEMOTION:
             if clicked_mouse_position is not None:
                 dragged = True
@@ -70,8 +87,22 @@ def game_loop():
                 #  update the location of the mouse for get_rel
                 pygame.mouse.get_rel()
 
-        game_map.update()
+        if not paused:
+            game_map.update()
         visualiser.render_game(clicked_mouse_position)
+        """
+        tick += 1
+
+        if tick == 1000:
+            pr.disable()
+            s = io.StringIO()
+            sortby = SortKey.CUMULATIVE
+            ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+            ps.print_stats()
+            print(s.getvalue())
+            game_running = False
+        """
+
 
 
 if __name__ == '__main__':

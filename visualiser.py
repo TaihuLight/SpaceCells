@@ -49,41 +49,47 @@ class Visualiser:
         distance = 200
         for i in range(self.game_map.size//distance):
             pygame.draw.line(self.screen, (255, 255, 255), self.game_map.true_to_screen((i * distance, 0)),
-                             self.game_map.true_to_screen((i * distance, self.game_map.size)))
+                             self.game_map.true_to_screen((i * distance, self.game_map.size-distance)))
             pygame.draw.line(self.screen, (255, 255, 255), self.game_map.true_to_screen((0, i * distance)),
-                             self.game_map.true_to_screen((self.game_map.size, i * distance)))
+                             self.game_map.true_to_screen((self.game_map.size-distance, i * distance)))
 
         zoom = self.game_map.zoom
-        screen_point = self.game_map.true_to_screen((500, 500))
-        pygame.draw.rect(self.screen, (255, 0, 0), (screen_point[0], screen_point[1], 50*zoom, 50*zoom))
 
         # Draw all space objects
         for space_object in self.game_map.space_objects:
             body = space_object.body
             if space_object.faction == 'player':
-                hull_colour = (0, 0, 255)
+                hull_colour = (75, 75, 255)
+                armor_colour = (0, 0, 255)
                 turret_colour = (0, 100, 255)
             elif space_object.faction == 'enemy':
-                hull_colour = (255, 0, 0)
+                hull_colour = (255, 75, 75)
+                armor_colour = (255, 0, 0)
                 turret_colour = (255, 70, 0)
             elif space_object.faction == 'neutral':
                 hull_colour = (65, 65, 65)
+                armor_colour = (45, 45, 45)
                 turret_colour = (30, 30, 30)
+
+            top_left_point = self.cell_size * (-len(body[0]) / 2), self.cell_size * (-len(body) / 2)
+            top_second_left_point = self.cell_size * (-len(body[0]) / 2) + self.cell_size, self.cell_size * (-len(body) / 2)
+            point1 = self.game_map.true_to_screen_float(space_object.ship_to_true(top_left_point))
+            point2 = self.game_map.true_to_screen_float(space_object.ship_to_true(top_second_left_point))
+            x_difference = point2[0] - point1[0]
+            y_difference = point2[1] - point1[1]
             for y in range(len(body)):
                 for x in range(len(body[y])):
                     if body[y][x] != 0:
-                        top_left_x = self.cell_size*(x-len(body[0])/2)
-                        top_left_y = self.cell_size*(y-len(body)/2)
-                        true_point_1 = space_object.ship_to_true((top_left_x, top_left_y))
-                        true_point_2 = space_object.ship_to_true((top_left_x+self.cell_size, top_left_y))
-                        true_point_3 = space_object.ship_to_true((top_left_x+self.cell_size, top_left_y+self.cell_size))
-                        true_point_4 = space_object.ship_to_true((top_left_x, top_left_y+self.cell_size))
-                        screen_points = [self.game_map.true_to_screen(true_point_1),
-                                         self.game_map.true_to_screen(true_point_2),
-                                         self.game_map.true_to_screen(true_point_3),
-                                         self.game_map.true_to_screen(true_point_4)]
+                        base_point_x = point1[0] + x_difference * x - y_difference * y
+                        base_point_y = point1[1] + y_difference * x + x_difference * y
+                        screen_points = [(round(base_point_x), round(base_point_y)),
+                                         (round(base_point_x - y_difference), round(base_point_y + x_difference)),
+                                         (round(base_point_x - y_difference + x_difference), round(base_point_y + y_difference + x_difference)),
+                                         (round(base_point_x + x_difference), round(base_point_y + y_difference))]
                         if body[y][x] == 1:
                             pygame.draw.polygon(self.screen, hull_colour, screen_points)
+                        elif body[y][x] == 2:
+                            pygame.draw.polygon(self.screen, armor_colour, screen_points)
                         elif body[y][x] == 3:
                             pygame.draw.polygon(self.screen, turret_colour, screen_points)
 

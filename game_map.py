@@ -66,6 +66,12 @@ class GameMap:
         self.create_space_object('enemy_corvette', (1500, 1500))
         self.create_space_object('enemy_corvette', (1600, 1500))
         self.create_space_object('enemy_corvette', (1500, 1600))
+        self.create_space_object('enemy_corvette', (1400, 100))
+        self.create_space_object('enemy_corvette', (1400, 200))
+        self.create_space_object('enemy_corvette', (1500, 100))
+        self.create_space_object('enemy_corvette', (100, 1500))
+        self.create_space_object('enemy_corvette', (200, 1500))
+        self.create_space_object('enemy_corvette', (100, 1600))
 
     def pan(self, motion: Tuple[int, int]) -> None:
         self.x_offset += motion[0]//self.zoom
@@ -81,6 +87,11 @@ class GameMap:
     def true_to_screen(self, point: Tuple[int, int]) -> Tuple[int, int]:
         x = round((point[0] + self.x_offset) * self.zoom)
         y = round((point[1] + self.y_offset) * self.zoom)
+        return x, y
+
+    def true_to_screen_float(self, point: Tuple[int, int]) -> Tuple[float, float]:
+        x = (point[0] + self.x_offset) * self.zoom
+        y = (point[1] + self.y_offset) * self.zoom
         return x, y
 
     def screen_to_true(self, point: Tuple[int, int]) -> Tuple[int, int]:
@@ -120,20 +131,24 @@ class GameMap:
 
     def create_space_object(self, name: str, position: Tuple[int, int]) -> None:
         if name == 'corvette':
-            body = [[1, 1, 0, 0, 0, 0, 0],
-                    [0, 1, 1, 1, 1, 1, 0],
-                    [0, 1, 3, 1, 3, 1, 1],
-                    [0, 1, 1, 1, 1, 1, 0],
-                    [1, 1, 0, 0, 0, 0, 0]]
+            body = [[2, 2, 2, 2, 0, 0, 0, 0, 0, 0],
+                    [2, 1, 1, 2, 2, 2, 2, 2, 0, 0],
+                    [0, 0, 1, 1, 3, 1, 1, 1, 2, 0],
+                    [0, 0, 0, 1, 1, 1, 1, 1, 3, 2],
+                    [0, 0, 1, 1, 3, 1, 1, 1, 2, 0],
+                    [2, 1, 1, 2, 2, 2, 2, 2, 0, 0],
+                    [2, 2, 2, 2, 0, 0, 0, 0, 0, 0]]
             new_space_object = StarShip(name, body, 'player', position, 0.01, 0.02, 1)
             self.player_ships.append(new_space_object)
             self.all_ships.append(new_space_object)
         if name == 'enemy_corvette':
-            body = [[1, 1, 0, 0, 0, 0, 0],
-                    [0, 1, 1, 1, 1, 1, 0],
-                    [0, 1, 3, 1, 3, 1, 1],
-                    [0, 1, 1, 1, 1, 1, 0],
-                    [1, 1, 0, 0, 0, 0, 0]]
+            body = [[2, 2, 2, 2, 0, 0, 0, 0, 0, 0],
+                    [2, 1, 1, 2, 2, 2, 2, 2, 0, 0],
+                    [0, 0, 1, 1, 3, 1, 1, 1, 2, 0],
+                    [0, 0, 0, 1, 1, 1, 1, 1, 3, 2],
+                    [0, 0, 1, 1, 3, 1, 1, 1, 2, 0],
+                    [2, 1, 1, 2, 2, 2, 2, 2, 0, 0],
+                    [2, 2, 2, 2, 0, 0, 0, 0, 0, 0]]
             new_space_object = StarShip(name, body, 'enemy', position, 0.01, 0.02, 1)
             self.all_ships.append(new_space_object)
         self.space_objects.append(new_space_object)
