@@ -6,8 +6,10 @@ from random import randint
 
 
 cell_size = 10
-turret_range = 500
+short_range = 500
+medium_range = 800
 turret_cooldown = 160
+total_cannon_cooldown = 160
 bullet_speed = 2
 
 
@@ -84,10 +86,24 @@ class SpaceObject:
                         self.cells -= 1
                         bullets.remove(bullet)
                     elif self.body[y][x] == 2:
-                        self.body[y][x] = 1
-                        bullets.remove(bullet)
+                        if bullet.damage == 1:
+                            self.body[y][x] = 1
+                            bullets.remove(bullet)
+                        elif bullet.damage == 2:
+                            self.body[y][x] = 0
+                            if self.hull is not None:
+                                self.hull -= 1
+                            self.cells -= 1
+                            bullets.remove(bullet)
                     elif self.body[y][x] == 3:
                         del self.turrets[(y, x)]
+                        self.body[y][x] = 0
+                        if self.hull is not None:
+                            self.hull -= 1
+                        self.cells -= 1
+                        bullets.remove(bullet)
+                    elif self.body[y][x] == 4:
+                        self.cannons.remove((y, x))
                         self.body[y][x] = 0
                         if self.hull is not None:
                             self.hull -= 1
@@ -109,8 +125,14 @@ class StarShip(SpaceObject):
         Highest velocity the ship can have
     turrets:
         Location of all turrets in the body array
-    targets:
-        A list of angles between this ship and enemy ships in range
+    cannons:
+        Location of all cannons in the body array
+    cannon_cooldown:
+        How many ticks until the cannons can fire again
+    close_targets:
+        A list of angles between this ship and enemy ships in close range
+    medium_targets:
+        A list of angles between this ship and enemy ships in medium range
     """
     acceleration: float
     turn_speed: float
@@ -118,7 +140,10 @@ class StarShip(SpaceObject):
     selected: bool
     max_speed: float
     turrets: Dict[Tuple[int, int], int]
-    targets: List[float]
+    cannons: List[Tuple[int, int]]
+    cannon_cooldown: int
+    close_targets: List[float]
+    medium_targets: List[float]
 
     def __init__(self, name: str, body: List[List[int]], faction: str, position: Tuple[int, int],
                  acceleration: float, turn_speed: float, max_speed: float) -> None:
@@ -130,15 +155,22 @@ class StarShip(SpaceObject):
         self.selected = False
         self.max_speed = max_speed
         self.turrets = {}
-        self.targets = []
+        self.cannons = []
+        self.cannon_cooldown = total_cannon_cooldown
+        self.close_targets = []
+        self.medium_targets = []
         for i, sublist in enumerate(self.body):
             for j, number in enumerate(sublist):
                 if number == 1 or number == 2:
                     self.hull += 1
-                if number == 3:
+                elif number == 3:
                     self.turrets[i, j] = randint(0, turret_cooldown)
                     self.hull += 1
-        self.hull = int(self.hull / 2)
+                elif number == 4:
+                    self.cannons.append((i, j))
+                    self.hull += 1
+
+        self.hull = self.hull // 3
 
     def update(self, bullets: List[Bullet]) -> None:
         if self.destination is not None:
@@ -158,18 +190,6 @@ class StarShip(SpaceObject):
                     self.velocity_y -= min(0.02*sin(velocity_angle), self.velocity_y)
                 else:
                     self.velocity_y -= max(0.02 * sin(velocity_angle), self.velocity_y)
-        # Update this ship's turrets
-        if self.targets:
-            for turret_pos in self.turrets:
-                self.turrets[turret_pos] -= 1
-                if self.turrets[turret_pos] == 0:
-                    position = self.ship_to_true((int(cell_size * (turret_pos[1] - len(self.body[0]) / 2) + cell_size // 2),
-                                                  int(cell_size * (turret_pos[0] - len(self.body) / 2) + cell_size // 2)))
-                    new_bullet = Bullet(position, self.targets[randint(0, len(self.targets)-1)], self.faction)
-                    bullets.append(new_bullet)
-                    self.turrets[turret_pos] = turret_cooldown
-
-        SpaceObject.update(self, bullets)
 
     def move_to(self) -> None:
         x = self.destination[0] - self.position[0]
@@ -202,6 +222,56 @@ class StarShip(SpaceObject):
             self.velocity_y = self.max_speed * sin(velocity_angle)
 
 
+class Corvette(StarShip):
+    """A corvette class ship with turrets and cannons
+    """
+    def __init__(self, name: str, body: List[List[int]], faction: str, position: Tuple[int, int],
+                 acceleration: float, turn_speed: float, max_speed: float):
+        StarShip.__init__(self, name, body, faction, position, acceleration, turn_speed, max_speed)
+
+    def update(self, bullets: List[Bullet]) -> None:
+        StarShip.update(self, bullets)
+
+        # Update this ship's turrets
+        if self.close_targets:
+            for turret_pos in self.turrets:
+                self.turrets[turret_pos] -= 1
+                if self.turrets[turret_pos] == 0:
+                    position = self.ship_to_true(
+                        (int(cell_size * (turret_pos[1] - len(self.body[0]) / 2) + cell_size // 2),
+                         int(cell_size * (turret_pos[0] - len(self.body) / 2) + cell_size // 2)))
+                    rotation = self.close_targets[randint(0, len(self.close_targets) - 1)]
+                    new_bullet = Bullet(position, rotation, self.faction, 1)
+                    bullets.append(new_bullet)
+                    self.turrets[turret_pos] = turret_cooldown
+
+        # Update this ship's cannons
+        if self.cannon_cooldown > 0:
+            self.cannon_cooldown -= 1
+        cannons_fire = False
+        if self.cannon_cooldown == 0:
+            for target_angle in self.medium_targets:
+                if target_angle < 0:
+                    target_angle += (2 * pi)
+                difference_in_angles = target_angle - self.rotation
+                if difference_in_angles != 0 and abs(difference_in_angles) < 0.209 or \
+                        abs(difference_in_angles) > 2 * pi - 0.314:
+                    cannons_fire = True
+                    break
+
+        if cannons_fire:
+            for cannon_pos in self.cannons:
+                position = self.ship_to_true(
+                    (int(cell_size * (cannon_pos[1] - len(self.body[0]) / 2) + cell_size // 2),
+                     int(cell_size * (cannon_pos[0] - len(self.body) / 2) + cell_size // 2)))
+                rotation = self.rotation
+                new_bullet = Bullet(position, rotation, self.faction, 2)
+                bullets.append(new_bullet)
+            self.cannon_cooldown = total_cannon_cooldown
+
+        SpaceObject.update(self, bullets)
+
+
 class Bullet:
     """A bullet fired by a turret on a starship
     position:
@@ -220,13 +290,18 @@ class Bullet:
     velocity_y: float
     faction: str
     lifetime: int
+    damage: int
 
-    def __init__(self, position, rotation, faction) -> None:
+    def __init__(self, position: Tuple[float, float], rotation: float, faction: str, damage: int) -> None:
         self.position = position
-        self.velocity_x = bullet_speed*cos(rotation)
+        self.velocity_x = bullet_speed * cos(rotation)
         self.velocity_y = bullet_speed * sin(rotation)
         self.faction = faction
-        self.lifetime = 250
+        self.damage = damage
+        if damage == 1:
+            self.lifetime = 250
+        elif damage == 2:
+            self.lifetime = 500
 
     def update(self) -> None:
         self.position = self.position[0] + self.velocity_x, self.position[1] + self.velocity_y

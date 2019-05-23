@@ -53,16 +53,22 @@ class Visualiser:
             pygame.draw.line(self.screen, (255, 255, 255), self.game_map.true_to_screen((0, i * distance)),
                              self.game_map.true_to_screen((self.game_map.size-distance, i * distance)))
 
-        zoom = self.game_map.zoom
+        self.draw_objects()
+        self.draw_bullets()
+        self.draw_highlight_box(clicked_mouse_position)
 
-        # Draw all space objects
+        self.screen.blit(self.highlight_screen, (0, 0))
+
+        pygame.display.flip()
+
+    def draw_objects(self) -> None:
         for space_object in self.game_map.space_objects:
             body = space_object.body
             if space_object.faction == 'player':
                 hull_colour = (75, 75, 255)
                 armor_colour = (0, 0, 255)
                 turret_colour = (0, 100, 255)
-            elif space_object.faction == 'enemy':
+            elif space_object.faction == 'pirate':
                 hull_colour = (255, 75, 75)
                 armor_colour = (255, 0, 0)
                 turret_colour = (255, 70, 0)
@@ -90,28 +96,32 @@ class Visualiser:
                             pygame.draw.polygon(self.screen, hull_colour, screen_points)
                         elif body[y][x] == 2:
                             pygame.draw.polygon(self.screen, armor_colour, screen_points)
-                        elif body[y][x] == 3:
+                        elif body[y][x] == 3 or body[y][x] == 4:
                             pygame.draw.polygon(self.screen, turret_colour, screen_points)
 
             # Draw selection circle and destination line if starship selected
             if isinstance(space_object, StarShip) and space_object.selected:
                 true_position = self.game_map.true_to_screen(space_object.position)
-                pygame.draw.circle(self.screen, (0, 255, 0), true_position, int(space_object.hit_check_range*zoom), 2)
+                pygame.draw.circle(self.screen, (0, 255, 0), true_position, int(space_object.hit_check_range*self.game_map.zoom), 2)
                 if space_object.destination is not None:
                     true_destination = self.game_map.true_to_screen(space_object.destination)
                     pygame.draw.line(self.highlight_screen, (0, 255, 0), true_position, true_destination)
                     pygame.draw.circle(self.highlight_screen, (0, 255, 0), true_destination, 6, 1)
 
-        # Draw all bullets
-            for bullet in self.game_map.bullets:
-                if bullet.faction == 'player':
-                    bullet_colour = (0, 70, 112)
-                elif bullet.faction == 'enemy':
-                    bullet_colour = (210, 0, 64)
-                true_position = self.game_map.true_to_screen(bullet.position)
-                pygame.draw.circle(self.screen, bullet_colour, true_position, int(3 * zoom))
+    def draw_bullets(self) -> None:
+        zoom = self.game_map.zoom
+        for bullet in self.game_map.bullets:
+            if bullet.faction == 'player':
+                bullet_colour = (0, 70, 112)
+            elif bullet.faction == 'pirate':
+                bullet_colour = (210, 0, 64)
+            screen_position = self.game_map.true_to_screen(bullet.position)
+            if bullet.damage == 1:
+                pygame.draw.circle(self.screen, bullet_colour, screen_position, int(3 * zoom))
+            elif bullet.damage == 2:
+                pygame.draw.circle(self.screen, bullet_colour, screen_position, int(5 * zoom))
 
-        # Draw highlight box
+    def draw_highlight_box(self, clicked_mouse_position: Tuple[int, int]) -> None:
         if clicked_mouse_position is not None:
             screen_mouse_position = pygame.mouse.get_pos()
             screen_clicked_mouse_position = self.game_map.true_to_screen(clicked_mouse_position)
@@ -119,7 +129,3 @@ class Visualiser:
                              (screen_clicked_mouse_position[0], screen_clicked_mouse_position[1],
                               screen_mouse_position[0] - screen_clicked_mouse_position[0],
                               screen_mouse_position[1] - screen_clicked_mouse_position[1]))
-
-        self.screen.blit(self.highlight_screen, (0, 0))
-
-        pygame.display.flip()
