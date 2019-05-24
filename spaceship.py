@@ -133,6 +133,8 @@ class StarShip(SpaceObject):
         A list of angles between this ship and enemy ships in close range
     medium_targets:
         A list of angles between this ship and enemy ships in medium range
+    selected_target:
+        Enemy ship that is being targeted by this ship
     close_ships:
         A dictionary where keys are distances and values are enemy ships
     """
@@ -146,6 +148,7 @@ class StarShip(SpaceObject):
     cannon_cooldown: int
     close_targets: List[float]
     medium_targets: List[float]
+    selected_target: StarShip
     close_ships: Dict[float, StarShip]
 
     def __init__(self, name: str, body: List[List[int]], faction: str, position: Tuple[int, int],
@@ -162,6 +165,7 @@ class StarShip(SpaceObject):
         self.cannon_cooldown = total_cannon_cooldown
         self.close_targets = []
         self.medium_targets = []
+        self.selected_target = None
         self.close_ships = {}
         for i, sublist in enumerate(self.body):
             for j, number in enumerate(sublist):
@@ -178,32 +182,46 @@ class StarShip(SpaceObject):
 
     def update(self, bullets: List[Bullet]) -> None:
         if self.destination is not None:
-            self.move_to()
+            self.move_to(self.destination)
             if hypot(self.destination[0] - self.position[0], self.destination[1] - self.position[1]) \
                     < self.hit_check_range:
                 self.destination = None
-        elif self.velocity_x != 0 or self.velocity_y != 0:
-            velocity_angle = atan2(self.velocity_y, self.velocity_x)
-            if self.velocity_x != 0:
-                if self.velocity_x > 0:
-                    self.velocity_x -= min(0.02*cos(velocity_angle), self.velocity_x)
+        elif self.selected_target is not None:
+            if self.selected_target.faction == 'neutral' or self.selected_target.faction == self.faction:
+                self.selected_target = None
+            else:
+                target_distance = hypot(self.selected_target.position[0] - self.position[0],
+                                        self.selected_target.position[1] - self.position[1])
+                if len(self.cannons) > 0 and target_distance < medium_range:
+                    self.rotate_towards(self.selected_target.position)
+                    self.decelerate()
+                elif target_distance < short_range:
+                    self.decelerate()
                 else:
-                    self.velocity_x -= max(0.02 * cos(velocity_angle), self.velocity_x)
-            if self.velocity_y != 0:
-                if self.velocity_y > 0:
-                    self.velocity_y -= min(0.02*sin(velocity_angle), self.velocity_y)
-                else:
-                    self.velocity_y -= max(0.02 * sin(velocity_angle), self.velocity_y)
+                    self.move_to(self.selected_target.position)
+        else:
+            self.decelerate()
 
-    def move_to(self) -> None:
-        x = self.destination[0] - self.position[0]
-        y = self.destination[1] - self.position[1]
+    def move_to(self, destination: Tuple[float, float]) -> None:
+        self.rotate_towards(destination)
+
+        self.velocity_x += self.acceleration * cos(self.rotation)
+        self.velocity_y += self.acceleration * sin(self.rotation)
+
+        if hypot(self.velocity_x, self.velocity_y) > self.max_speed:
+            velocity_angle = atan2(self.velocity_y, self.velocity_x)
+            self.velocity_x = self.max_speed * cos(velocity_angle)
+            self.velocity_y = self.max_speed * sin(velocity_angle)
+
+    def rotate_towards(self, destination: Tuple[float, float]) -> None:
+        x = destination[0] - self.position[0]
+        y = destination[1] - self.position[1]
         destination_angle = atan2(y, x)
         if destination_angle < 0:
-            destination_angle += (2*pi)
+            destination_angle += (2 * pi)
         difference_in_angles = destination_angle - self.rotation
         if difference_in_angles != 0:
-            if abs(difference_in_angles) < self.turn_speed or abs(difference_in_angles) > 2*pi - self.turn_speed:
+            if abs(difference_in_angles) < self.turn_speed or abs(difference_in_angles) > 2 * pi - self.turn_speed:
                 self.rotation = destination_angle
             else:
                 if abs(difference_in_angles) < pi:
@@ -217,13 +235,19 @@ class StarShip(SpaceObject):
                     else:
                         self.rotation -= self.turn_speed
 
-        self.velocity_x += self.acceleration * cos(self.rotation)
-        self.velocity_y += self.acceleration * sin(self.rotation)
-
-        if hypot(self.velocity_x, self.velocity_y) > self.max_speed:
+    def decelerate(self) -> None:
+        if self.velocity_x != 0 or self.velocity_y != 0:
             velocity_angle = atan2(self.velocity_y, self.velocity_x)
-            self.velocity_x = self.max_speed * cos(velocity_angle)
-            self.velocity_y = self.max_speed * sin(velocity_angle)
+            if self.velocity_x != 0:
+                if self.velocity_x > 0:
+                    self.velocity_x -= min(0.02*cos(velocity_angle), self.velocity_x)
+                else:
+                    self.velocity_x -= max(0.02 * cos(velocity_angle), self.velocity_x)
+            if self.velocity_y != 0:
+                if self.velocity_y > 0:
+                    self.velocity_y -= min(0.02*sin(velocity_angle), self.velocity_y)
+                else:
+                    self.velocity_y -= max(0.02 * sin(velocity_angle), self.velocity_y)
 
 
 class Corvette(StarShip):
@@ -258,8 +282,8 @@ class Corvette(StarShip):
                 if target_angle < 0:
                     target_angle += (2 * pi)
                 difference_in_angles = target_angle - self.rotation
-                if difference_in_angles != 0 and abs(difference_in_angles) < 0.209 or \
-                        abs(difference_in_angles) > 2 * pi - 0.314:
+                if difference_in_angles == 0 or abs(difference_in_angles) < 0.209 or \
+                        abs(difference_in_angles) > 2 * pi - 0.209:
                     cannons_fire = True
                     break
 

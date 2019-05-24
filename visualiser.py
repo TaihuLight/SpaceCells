@@ -99,11 +99,19 @@ class Visualiser:
                         elif body[y][x] == 3 or body[y][x] == 4:
                             pygame.draw.polygon(self.screen, turret_colour, screen_points)
 
-            # Draw selection circle and destination line if starship selected
+            # Draw selection circle if starship selected
             if isinstance(space_object, StarShip) and space_object.selected:
                 true_position = self.game_map.true_to_screen(space_object.position)
                 pygame.draw.circle(self.screen, (0, 255, 0), true_position, int(space_object.hit_check_range*self.game_map.zoom), 2)
-                if space_object.destination is not None:
+                # Draw target circle and line
+                if space_object.selected_target is not None:
+                    target_ship = space_object.selected_target
+                    true_target_position = self.game_map.true_to_screen(target_ship.position)
+                    pygame.draw.circle(self.screen, (255, 0, 0), true_target_position,
+                                       int(target_ship.hit_check_range * self.game_map.zoom), 2)
+                    pygame.draw.line(self.highlight_screen, (255, 0, 0), true_position, true_target_position)
+                # Draw destination circle and line
+                elif space_object.destination is not None:
                     true_destination = self.game_map.true_to_screen(space_object.destination)
                     pygame.draw.line(self.highlight_screen, (0, 255, 0), true_position, true_destination)
                     pygame.draw.circle(self.highlight_screen, (0, 255, 0), true_destination, 6, 1)

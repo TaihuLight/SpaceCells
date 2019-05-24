@@ -61,5 +61,12 @@ class PodManager:
                     y = randint(-200, 200)
                     ship.destination = new_destination_x + x, new_destination_y + y
         else:
-            pass
+            for ship in self.star_ships:
+                ship.destination = None
+                if ship.close_ships:
+                    ship.selected_target = ship.close_ships[min(ship.close_ships.keys())]
+                else:
+                    if self.game_map.all_ships[self.target]:
+                        random_num = randint(0, len(self.game_map.all_ships[self.target]) - 1)
+                        ship.selected_target = self.game_map.all_ships[self.target][random_num]
 

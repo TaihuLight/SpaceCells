@@ -99,7 +99,7 @@ class GameMap:
         y = round(point[1] / self.zoom - self.y_offset)
         return x, y
 
-    def check_selection_click(self, clicked_mouse_position: Tuple[int, int]):
+    def check_selection_click(self, clicked_mouse_position: Tuple[int, int]) -> None:
         for ship in self.all_ships['player']:
             if hypot(clicked_mouse_position[0] - ship.position[0], clicked_mouse_position[1] - ship.position[1]) \
                     < ship.hit_check_range:
@@ -124,10 +124,37 @@ class GameMap:
             ship.selected = False
         self.selected_ships = []
 
-    def set_destination(self) -> None:
-        true_destination = self.screen_to_true(pygame.mouse.get_pos())
-        for ship in self.selected_ships:
-            ship.destination = true_destination
+    def handel_order(self) -> None:
+        if self.selected_ships:
+            true_mouse_position = self.screen_to_true(pygame.mouse.get_pos())
+            for faction in self.all_ships:
+                if faction != 'player' and faction != 'neutral':
+                    for enemy_ship in self.all_ships[faction]:
+                        if hypot(true_mouse_position[0] - enemy_ship.position[0],
+                                 true_mouse_position[1] - enemy_ship.position[1]) < enemy_ship.hit_check_range:
+                            for selected_ship in self.selected_ships:
+                                selected_ship.destination = None
+                                selected_ship.selected_target = enemy_ship
+                            return
+            # Only run if no enemy ship selected
+            self.set_destination(true_mouse_position)
+
+    def set_destination(self, true_destination: Tuple[int, int]) -> None:
+        amount_selected = len(self.selected_ships)
+        if amount_selected > 1:
+            mid_position_x = 0
+            mid_position_y = 0
+            for ship in self.selected_ships:
+                mid_position_x += ship.position[0]
+                mid_position_y += ship.position[1]
+            mid_position_x = mid_position_x / amount_selected
+            mid_position_y = mid_position_y / amount_selected
+            for ship in self.selected_ships:
+                ship.destination = (true_destination[0] + ship.position[0] - mid_position_x,
+                                    true_destination[1] + ship.position[1] - mid_position_y)
+                ship.selected_target = None
+        elif amount_selected == 1:
+            self.selected_ships[0].destination = true_destination
 
     def update(self) -> None:
         self.update_target_time -= 1

@@ -50,8 +50,7 @@ def game_loop():
             if event.button == 1:
                 # Unselect currently selected ships
                 game_map.unselect()
-                clicked_mouse_position = pygame.mouse.get_pos()
-                clicked_mouse_position = game_map.screen_to_true(clicked_mouse_position)
+                clicked_mouse_position = game_map.screen_to_true(pygame.mouse.get_pos())
                 dragged = False
             elif event.button == 3:
                 right_mouse_pressed = True
@@ -65,14 +64,14 @@ def game_loop():
                 # Check if ships are selected
                 if not dragged:
                     game_map.check_selection_click(clicked_mouse_position)
-
                 elif clicked_mouse_position is not None:
                     game_map.check_selection_box(clicked_mouse_position)
                 clicked_mouse_position = None
+
             elif event.button == 3:
                 right_mouse_pressed = False
                 if not panned:
-                    game_map.set_destination()
+                    game_map.handel_order()
             panned = False
 
         elif event.type == pygame.KEYDOWN:
