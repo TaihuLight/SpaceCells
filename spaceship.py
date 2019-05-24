@@ -133,6 +133,8 @@ class StarShip(SpaceObject):
         A list of angles between this ship and enemy ships in close range
     medium_targets:
         A list of angles between this ship and enemy ships in medium range
+    close_ships:
+        A dictionary where keys are distances and values are enemy ships
     """
     acceleration: float
     turn_speed: float
@@ -144,6 +146,7 @@ class StarShip(SpaceObject):
     cannon_cooldown: int
     close_targets: List[float]
     medium_targets: List[float]
+    close_ships: Dict[float, StarShip]
 
     def __init__(self, name: str, body: List[List[int]], faction: str, position: Tuple[int, int],
                  acceleration: float, turn_speed: float, max_speed: float) -> None:
@@ -159,6 +162,7 @@ class StarShip(SpaceObject):
         self.cannon_cooldown = total_cannon_cooldown
         self.close_targets = []
         self.medium_targets = []
+        self.close_ships = {}
         for i, sublist in enumerate(self.body):
             for j, number in enumerate(sublist):
                 if number == 1 or number == 2:

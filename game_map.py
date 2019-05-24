@@ -62,16 +62,16 @@ class GameMap:
 
         self.create_space_object('corvette', (500, 500))
         self.create_space_object('corvette', (300, 600))
-        self.create_space_object('corvette', (700, 809))
+        self.create_space_object('corvette', (600, 300))
         self.create_space_object('gunboat', (1500, 1500))
         self.create_space_object('gunboat', (1600, 1500))
         self.create_space_object('gunboat', (1500, 1600))
         self.create_space_object('gunboat', (1400, 100))
         self.create_space_object('gunboat', (1400, 200))
         self.create_space_object('gunboat', (1500, 100))
-        self.create_space_object('gunboat', (100, 1500))
-        self.create_space_object('gunboat', (200, 1500))
-        self.create_space_object('gunboat', (100, 1600))
+        self.create_space_object('hammerhead', (100, 1500))
+        self.create_space_object('hammerhead', (300, 1500))
+        self.create_space_object('hammerhead', (100, 1600))
 
     def pan(self, motion: Tuple[int, int]) -> None:
         self.x_offset += motion[0]//self.zoom
@@ -169,6 +169,7 @@ class GameMap:
             for ship in self.all_ships[faction]:
                 ship.close_targets = []
                 ship.medium_targets = []
+                ship.close_ships = {}
 
         for i in range(len(self.game_factions)):
             for j in range(i + 1, len(self.game_factions)):
@@ -179,12 +180,12 @@ class GameMap:
                         distance = hypot(x, y)
                         if distance < short_range:
                             ship1.close_targets.append((atan2(y, x)))
-                            ship1.medium_targets.append((atan2(y, x)))
                             ship2.close_targets.append((atan2(-y, -x)))
-                            ship2.medium_targets.append((atan2(-y, -x)))
-                        elif distance < medium_range:
+                        if distance < medium_range:
                             ship1.medium_targets.append((atan2(y, x)))
+                            ship1.close_ships[distance] = ship2
                             ship2.medium_targets.append((atan2(-y, -x)))
+                            ship2.close_ships[distance] = ship1
 
     def create_space_object(self, name: str, position: Tuple[int, int]) -> None:
         if name == 'corvette':
@@ -203,6 +204,16 @@ class GameMap:
                     [2, 3, 1, 1, 3, 1, 2],
                     [2, 1, 2, 1, 1, 1, 2],
                     [0, 2, 0, 2, 2, 2, 0]]
+            new_space_object = Corvette(name, body, 'pirate', position, 0.01, 0.02, 1)
+            self.all_ships['pirate'].append(new_space_object)
+        if name == 'hammerhead':
+            body = [[2, 2, 2, 0, 0, 0, 0, 0, 2, 2],
+                    [1, 1, 1, 2, 0, 0, 0, 0, 2, 4],
+                    [0, 0, 0, 1, 1, 2, 2, 2, 1, 2],
+                    [0, 0, 0, 1, 1, 1, 1, 1, 1, 4],
+                    [0, 0, 0, 1, 1, 2, 2, 2, 1, 2],
+                    [1, 1, 1, 2, 0, 0, 0, 0, 2, 4],
+                    [2, 2, 2, 0, 0, 0, 0, 0, 2, 2]]
             new_space_object = Corvette(name, body, 'pirate', position, 0.01, 0.02, 1)
             self.all_ships['pirate'].append(new_space_object)
         self.space_objects.append(new_space_object)

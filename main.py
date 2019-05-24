@@ -4,6 +4,7 @@
 import pygame
 from visualiser import Visualiser
 from game_map import GameMap
+from enemy_ai import PodManager
 import time
 import cProfile, pstats, io
 from pstats import SortKey
@@ -18,10 +19,14 @@ def game_loop():
     game_running = True
     game_map = GameMap(2000, 1600, 900)
     visualiser = Visualiser(1600, 900, game_map, 10)
+    pods = [PodManager(game_map, game_map.all_ships['pirate'][0:3]),
+            PodManager(game_map, game_map.all_ships['pirate'][3:6]),
+            PodManager(game_map, game_map.all_ships['pirate'][6:9])]
     pygame.init()
     right_mouse_pressed = False
     clicked_mouse_position = None
     fps = 60
+    pod_update_time = 60
     last_frame_time = time.time()
     panned = False
     dragged = False
@@ -89,6 +94,12 @@ def game_loop():
 
         if not paused:
             game_map.update()
+            if pod_update_time == 0:
+                for pod in pods:
+                    pod.update()
+                pod_update_time = 60
+            else:
+                pod_update_time -= 1
         visualiser.render_game(clicked_mouse_position)
         """
         tick += 1
@@ -102,7 +113,6 @@ def game_loop():
             print(s.getvalue())
             game_running = False
         """
-
 
 
 if __name__ == '__main__':

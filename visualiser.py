@@ -13,7 +13,7 @@ class Visualiser:
         height of the screen
     screen:
         !!!!!!!
-    map:
+    game_map:
         stores all objects on the game map
     cell_size:
         size of a cell
@@ -69,7 +69,7 @@ class Visualiser:
                 armor_colour = (0, 0, 255)
                 turret_colour = (0, 100, 255)
             elif space_object.faction == 'pirate':
-                hull_colour = (255, 75, 75)
+                hull_colour = (255, 200, 0)
                 armor_colour = (255, 0, 0)
                 turret_colour = (255, 70, 0)
             elif space_object.faction == 'neutral':
