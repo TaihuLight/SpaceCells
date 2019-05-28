@@ -1,9 +1,11 @@
 # Commit message change
 import pygame
 from typing import Tuple, List, Dict
-from spaceship import StarShip, Bullet, short_range, medium_range, Corvette
+from spaceship import StarShip, Bullet, short_range, medium_range, Corvette, Asteroid
 from math import hypot, atan2
+from random import randint
 update_target_total_time = 5
+test_env = False
 
 
 class GameMap:
@@ -59,19 +61,24 @@ class GameMap:
         self.selected_ships = []
         self.bullets = []
         self.update_target_time = update_target_total_time
-
-        self.create_space_object('corvette', (500, 500))
-        self.create_space_object('corvette', (300, 600))
-        self.create_space_object('corvette', (600, 300))
-        self.create_space_object('gunboat', (1500, 1500))
-        self.create_space_object('gunboat', (1600, 1500))
-        self.create_space_object('gunboat', (1500, 1600))
-        self.create_space_object('gunboat', (1400, 100))
-        self.create_space_object('gunboat', (1400, 200))
-        self.create_space_object('gunboat', (1500, 100))
-        self.create_space_object('hammerhead', (100, 1500))
-        self.create_space_object('hammerhead', (300, 1500))
-        self.create_space_object('hammerhead', (100, 1600))
+        if test_env:
+            self.create_space_object('corvette', (500, 500))
+            self.create_space_object('corvette', (300, 600))
+        else:
+            self.create_space_object('corvette', (500, 500))
+            self.create_space_object('corvette', (300, 600))
+            self.create_space_object('corvette', (600, 300))
+            self.create_space_object('gunboat', (1500, 1500))
+            self.create_space_object('gunboat', (1600, 1500))
+            self.create_space_object('gunboat', (1500, 1600))
+            self.create_space_object('gunboat', (1400, 100))
+            self.create_space_object('gunboat', (1400, 200))
+            self.create_space_object('gunboat', (1500, 100))
+            self.create_space_object('hammerhead', (100, 1500))
+            self.create_space_object('hammerhead', (300, 1500))
+            self.create_space_object('hammerhead', (100, 1600))
+            for _ in range(10):
+                self.create_space_object('asteroid', (randint(0, self.size), randint(0, self.size)))
 
     def pan(self, motion: Tuple[int, int]) -> None:
         self.x_offset += motion[0]//self.zoom
@@ -155,6 +162,7 @@ class GameMap:
                 ship.selected_target = None
         elif amount_selected == 1:
             self.selected_ships[0].destination = true_destination
+            self.selected_ships[0].selected_target = None
 
     def update(self) -> None:
         self.update_target_time -= 1
@@ -167,11 +175,13 @@ class GameMap:
             if bullet.lifetime == 0:
                 self.bullets.remove(bullet)
 
+        self.check_collisions()
+
         for space_object in self.space_objects:
             space_object.update(self.bullets)
 
             # Check if ships have been disabled
-            if space_object.hull is not None and space_object.hull == 0:
+            if space_object.hull is not None and space_object.hull <= 0:
                 if space_object.faction == 'player':
                     self.all_ships['player'].remove(space_object)
                     if space_object in self.selected_ships:
@@ -182,6 +192,7 @@ class GameMap:
                 space_object.faction = 'neutral'
                 space_object.targets = []
                 space_object.destination = None
+                space_object.selected_target = None
                 space_object.hull = None
                 self.all_ships['neutral'].append(space_object)
 
@@ -214,6 +225,15 @@ class GameMap:
                             ship2.medium_targets.append((atan2(-y, -x)))
                             ship2.close_ships[distance] = ship1
 
+    def check_collisions(self) -> None:
+        for i, object1 in enumerate(self.space_objects[:len(self.space_objects) - 1]):
+            for object2 in self.space_objects[i + 1:]:
+                x = object2.position[0] - object1.position[0]
+                y = object2.position[1] - object1.position[1]
+                distance = hypot(x, y)
+                if distance < object1.hit_check_range + object2.hit_check_range:
+                    object1.handel_collision(object2)
+
     def create_space_object(self, name: str, position: Tuple[int, int]) -> None:
         if name == 'corvette':
             body = [[2, 2, 2, 2, 0, 0, 0, 0, 0, 0],
@@ -243,4 +263,30 @@ class GameMap:
                     [2, 2, 2, 0, 0, 0, 0, 0, 2, 2]]
             new_space_object = Corvette(name, body, 'pirate', position, 0.01, 0.02, 1)
             self.all_ships['pirate'].append(new_space_object)
+        if name == 'asteroid':
+            body = []
+            size = 11
+            middle = size // 2
+
+            left_extend = 0
+            right_extend = 0
+            for i in range(size):
+                row = []
+                if i < middle:
+                    if left_extend < (size - 1)//2:
+                        left_extend += randint(0, 2)
+                    if right_extend < (size - 1)//2:
+                        right_extend += randint(0, 2)
+                else:
+                    if 0 < left_extend:
+                        left_extend -= randint(0, 2)
+                    if 0 < right_extend:
+                        right_extend -= randint(0, 2)
+                for k in range(size):
+                    if middle - left_extend <= k <= middle + right_extend:
+                        row.append(randint(1, 2))
+                    else:
+                        row.append(0)
+                body.append(row)
+            new_space_object = Asteroid(name, body, 'neutral', position)
         self.space_objects.append(new_space_object)

@@ -73,9 +73,13 @@ class Visualiser:
                 armor_colour = (255, 0, 0)
                 turret_colour = (255, 70, 0)
             elif space_object.faction == 'neutral':
-                hull_colour = (65, 65, 65)
-                armor_colour = (45, 45, 45)
-                turret_colour = (30, 30, 30)
+                if space_object.name == 'asteroid':
+                    hull_colour = (102, 51, 0)
+                    armor_colour = (204, 68, 45)
+                else:
+                    hull_colour = (65, 65, 65)
+                    armor_colour = (45, 45, 45)
+                    turret_colour = (30, 30, 30)
 
             top_left_point = self.cell_size * (-len(body[0]) / 2), self.cell_size * (-len(body) / 2)
             top_second_left_point = self.cell_size * (-len(body[0]) / 2) + self.cell_size, self.cell_size * (-len(body) / 2)

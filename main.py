@@ -1,6 +1,3 @@
-
-
-# Commit message change
 import pygame
 from visualiser import Visualiser
 from game_map import GameMap
@@ -8,6 +5,7 @@ from enemy_ai import PodManager
 import time
 import cProfile, pstats, io
 from pstats import SortKey
+test_env = False
 
 
 def game_loop():
@@ -19,9 +17,12 @@ def game_loop():
     game_running = True
     game_map = GameMap(2000, 1600, 900)
     visualiser = Visualiser(1600, 900, game_map, 10)
-    pods = [PodManager(game_map, game_map.all_ships['pirate'][0:3]),
-            PodManager(game_map, game_map.all_ships['pirate'][3:6]),
-            PodManager(game_map, game_map.all_ships['pirate'][6:9])]
+    if test_env:
+        pods = []
+    else:
+        pods = [PodManager(game_map, game_map.all_ships['pirate'][0:3]),
+                PodManager(game_map, game_map.all_ships['pirate'][3:6]),
+                PodManager(game_map, game_map.all_ships['pirate'][6:9])]
     pygame.init()
     right_mouse_pressed = False
     clicked_mouse_position = None
