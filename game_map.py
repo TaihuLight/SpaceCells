@@ -71,6 +71,7 @@ class GameMap:
             self.create_space_object('corvette', (300, 600))
             self.create_space_object('corvette', (600, 300))
             self.create_space_object('miner', (300, 300))
+            self.create_space_object('miner', (200, 200))
             self.create_space_object('gunboat', (1500, 1500))
             self.create_space_object('gunboat', (1600, 1500))
             self.create_space_object('gunboat', (1500, 1600))
@@ -135,19 +136,6 @@ class GameMap:
         self.selected_ships = []
 
     def handel_order(self) -> None:
-        """
-        if self.selected_ships:
-            true_mouse_position = self.screen_to_true(pygame.mouse.get_pos())
-            for faction in self.all_ships:
-                if faction != 'player' and faction != 'neutral':
-                    for enemy_ship in self.all_ships[faction]:
-                        if hypot(true_mouse_position[0] - enemy_ship.position[0],
-                                 true_mouse_position[1] - enemy_ship.position[1]) < enemy_ship.hit_check_range:
-                            for selected_ship in self.selected_ships:
-                                selected_ship.destination = None
-                                selected_ship.selected_target = enemy_ship
-                            return
-        """
         if self.selected_ships:
             true_mouse_position = self.screen_to_true(pygame.mouse.get_pos())
             for space_object in self.space_objects:
@@ -157,13 +145,11 @@ class GameMap:
                         if space_object.faction == 'neutral':
                             for selected_ship in self.selected_ships:
                                 if isinstance(selected_ship, Miner):
-                                    selected_ship.destination = None
-                                    selected_ship.selected_target = space_object
+                                    selected_ship.set_target(space_object)
                         else:
                             for selected_ship in self.selected_ships:
                                 if not isinstance(selected_ship, Miner):
-                                    selected_ship.destination = None
-                                    selected_ship.selected_target = space_object
+                                    selected_ship.set_target(space_object)
                         return
 
             # Only run if no enemy ship selected
@@ -180,12 +166,10 @@ class GameMap:
             mid_position_x = mid_position_x / amount_selected
             mid_position_y = mid_position_y / amount_selected
             for ship in self.selected_ships:
-                ship.destination = (true_destination[0] + ship.position[0] - mid_position_x,
-                                    true_destination[1] + ship.position[1] - mid_position_y)
-                ship.selected_target = None
+                ship.set_destination((true_destination[0] + ship.position[0] - mid_position_x,
+                                      true_destination[1] + ship.position[1] - mid_position_y))
         elif amount_selected == 1:
-            self.selected_ships[0].destination = true_destination
-            self.selected_ships[0].selected_target = None
+            self.selected_ships[0].set_destination(true_destination)
 
     def update(self) -> None:
         self.update_target_time -= 1
@@ -208,15 +192,10 @@ class GameMap:
                 if space_object.faction == 'player':
                     self.all_ships['player'].remove(space_object)
                     if space_object in self.selected_ships:
-                        space_object.selected = False
                         self.selected_ships.remove(space_object)
                 else:
                     self.all_ships[space_object.faction].remove(space_object)
-                space_object.faction = 'neutral'
-                space_object.targets = []
-                space_object.destination = None
-                space_object.selected_target = None
-                space_object.hull = None
+                space_object.deactivate()
                 self.all_ships['neutral'].append(space_object)
 
             # Remove objects that have no cells
@@ -240,13 +219,17 @@ class GameMap:
                         y = ship2.position[1] - ship1.position[1]
                         distance = hypot(x, y)
                         if distance < short_range:
-                            ship1.close_targets.append((atan2(y, x)))
-                            ship2.close_targets.append((atan2(-y, -x)))
+                            if ship1.faction != 'neutral':
+                                ship1.close_targets.append((atan2(y, x)))
+                            if ship2.faction != 'neutral':
+                                ship2.close_targets.append((atan2(-y, -x)))
                         if distance < medium_range:
-                            ship1.medium_targets.append((atan2(y, x)))
-                            ship1.close_ships[distance] = ship2
-                            ship2.medium_targets.append((atan2(-y, -x)))
-                            ship2.close_ships[distance] = ship1
+                            if ship1.faction != 'neutral':
+                                ship1.medium_targets.append((atan2(y, x)))
+                                ship1.close_ships[distance] = ship2
+                            if ship2.faction != 'neutral':
+                                ship2.medium_targets.append((atan2(-y, -x)))
+                                ship2.close_ships[distance] = ship1
 
     def check_collisions(self) -> None:
         for i, object1 in enumerate(self.space_objects[:len(self.space_objects) - 1]):
@@ -311,15 +294,9 @@ class GameMap:
                         right_extend += randint(0, 2)
                 else:
                     if 0 < left_extend:
-                        if left_extend > 1:
-                            left_extend -= randint(0, 2)
-                        else:
-                            left_extend -= randint(0, 1)
+                        left_extend -= randint(0, 2)
                     if 0 < right_extend:
-                        if right_extend > 1:
-                            right_extend -= randint(0, 2)
-                        else:
-                            right_extend -= randint(0, 1)
+                        right_extend -= randint(0, 2)
                 for k in range(size):
                     if middle - left_extend <= k <= middle + right_extend:
                         row.append(randint(1, 2))

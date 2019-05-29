@@ -1,8 +1,8 @@
 # Commit message change
 import pygame
 from game_map import GameMap
-from typing import Tuple
-from spaceship import StarShip, Asteroid
+from typing import Tuple, Any, List
+from spaceship import StarShip, Asteroid, Miner
 
 
 class Visualiser:
@@ -21,8 +21,10 @@ class Visualiser:
     width: int
     height: int
     screen: pygame.Surface
+    highlight_screen: pygame.Surface
     game_map: GameMap
     cell_size: int
+    effects: List[Tuple[str, Any]]
 
     def __init__(self, window_width: int, window_height: int, game_map: GameMap, cell_size: int) -> None:
         self.width = window_width
@@ -30,6 +32,7 @@ class Visualiser:
         self.screen = pygame.display.set_mode((window_width, window_height))
         self.game_map = game_map
         self.cell_size = cell_size
+        self.effects = []
 
         self.highlight_screen = pygame.Surface((window_width, window_height))
         self.highlight_screen.set_colorkey((0, 0, 0))
@@ -55,6 +58,7 @@ class Visualiser:
 
         self.draw_objects()
         self.draw_bullets()
+        self.draw_effects()
         self.draw_highlight_box(clicked_mouse_position)
 
         self.screen.blit(self.highlight_screen, (0, 0))
@@ -103,6 +107,16 @@ class Visualiser:
                         elif body[y][x] == 3 or body[y][x] == 4:
                             pygame.draw.polygon(self.screen, turret_colour, screen_points)
 
+            # Update effects
+            if isinstance(space_object, Miner):
+                if space_object.target_cell:
+                    target = space_object.selected_target
+                    point1 = self.game_map.true_to_screen(
+                        space_object.ship_to_true(space_object.body_to_ship(space_object.drill)))
+                    point2 = self.game_map.true_to_screen(
+                        target.ship_to_true(target.body_to_ship(space_object.target_cell)))
+                    self.effects.append(('mining_beam', (point1, point2, space_object.mining_charge)))
+
             # Draw selection circle if starship selected
             if isinstance(space_object, StarShip) and space_object.selected:
                 true_position = self.game_map.true_to_screen(space_object.position)
@@ -136,6 +150,15 @@ class Visualiser:
                 pygame.draw.circle(self.screen, bullet_colour, screen_position, int(3 * zoom))
             elif bullet.damage == 2:
                 pygame.draw.circle(self.screen, bullet_colour, screen_position, int(5 * zoom))
+
+    def draw_effects(self) -> None:
+        while self.effects:
+            effect = self.effects.pop()
+            if effect[0] == 'mining_beam':
+                point1 = effect[1][0]
+                point2 = effect[1][1]
+                charge = effect[1][2]
+                pygame.draw.line(self.screen, (230, 130 - charge*2, 0), point1, point2, int(3 * self.game_map.zoom))
 
     def draw_highlight_box(self, clicked_mouse_position: Tuple[int, int]) -> None:
         if clicked_mouse_position is not None:

@@ -14,6 +14,7 @@ def game_loop():
     pr.enable()
     tick = 0
     """
+
     game_running = True
     game_map = GameMap(2000, 1600, 900)
     visualiser = Visualiser(1600, 900, game_map, 10)
@@ -101,9 +102,9 @@ def game_loop():
             else:
                 pod_update_time -= 1
         visualiser.render_game(clicked_mouse_position)
+
         """
         tick += 1
-
         if tick == 1000:
             pr.disable()
             s = io.StringIO()

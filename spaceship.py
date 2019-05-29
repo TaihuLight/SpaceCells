@@ -79,6 +79,15 @@ class SpaceObject:
         y = (point[1] - self.position[1]) * cos(-self.rotation) + (point[0] - self.position[0]) * sin(-self.rotation)
         return x, y
 
+    def body_to_ship(self, position: Tuple[int, int]) -> Tuple[int, int]:
+        x = position[0]
+        y = position[1]
+        top_left_point = cell_size * (-len(self.body[0]) / 2) + cell_size // 2, \
+                         cell_size * (-len(self.body) / 2) + cell_size // 2
+        new_x = top_left_point[0] + cell_size * x
+        new_y = top_left_point[1] + cell_size * y
+        return new_x, new_y
+
     def update_position(self):
         self.rotation = self.rotation % (2 * pi)
         self.position = self.position[0] + self.velocity_x, self.position[1] + self.velocity_y
@@ -139,12 +148,12 @@ class StarShip(SpaceObject):
     """
     acceleration: float
     turn_speed: float
-    destination: Optional[Tuple[int, int]]
+    destination: Optional[Tuple[float, float]]
     selected: bool
     max_speed: float
     close_targets: List[float]
     medium_targets: List[float]
-    selected_target: Optional[StarShip]
+    selected_target: Optional[SpaceObject]
     close_ships: Dict[float, StarShip]
 
     def __init__(self, name: str, body: List[List[int]], faction: str, position: Tuple[int, int],
@@ -175,6 +184,14 @@ class StarShip(SpaceObject):
             self.handel_target()
         else:
             self.decelerate()
+
+    def set_destination(self, destination: Tuple[float, float]) -> None:
+        self.destination = destination
+        self.selected_target = None
+
+    def set_target(self, target: SpaceObject) -> None:
+        self.selected_target = target
+        self.destination = None
 
     def move_to(self, destination: Tuple[float, float]) -> None:
         self.rotate_towards(destination)
@@ -228,6 +245,16 @@ class StarShip(SpaceObject):
 
     def handel_damage(self, x: int, y: int, damage: int) -> bool:
         raise NotImplementedError
+
+    def deactivate(self) -> None:
+        self.faction = 'neutral'
+        self.destination = None
+        self.selected_target = None
+        self.hull = None
+        self.selected = False
+        self.close_targets = []
+        self.medium_targets = []
+        self.close_ships = {}
 
 
 class Battleship(StarShip):
@@ -364,13 +391,17 @@ class Miner(StarShip):
         Location of the drill in the body array
     mining_charge:
         Charge of the drill
+    target_cell:
+        Location of the cell being mined in selected target's body
     """
     drill: Optional[Tuple[int, int]]
     mining_charge: int
+    target_cell: Optional[Tuple[int, int]]
 
     def __init__(self, name: str, body: List[List[int]], faction: str, position: Tuple[int, int],
                  acceleration: float, turn_speed: float, max_speed: float):
         self.mining_charge = 0
+        self.target_cell = None
         StarShip.__init__(self, name, body, faction, position, acceleration, turn_speed, max_speed)
 
     def set_hull(self) -> None:
@@ -379,7 +410,7 @@ class Miner(StarShip):
                 if number == 1 or number == 2:
                     self.hull += 1
                 elif number == 3:
-                    self.drill = i, j
+                    self.drill = j, i
                     self.hull += 1
 
         self.hull = self.hull // 3
@@ -390,17 +421,40 @@ class Miner(StarShip):
         SpaceObject.update_position(self)
         self.check_damage_from_bullets(bullets)
 
+    def set_destination(self, destination: Tuple[float, float]) -> None:
+        StarShip.set_destination(self, destination)
+        self.mining_charge = 0
+        self.target_cell = None
+
     def handel_target(self) -> None:
         if self.selected_target.cells <= 0:
             self.selected_target = None
+            self.target_cell = None
+            self.mining_charge = 0
         else:
             target_distance = hypot(self.selected_target.position[0] - self.position[0],
                                     self.selected_target.position[1] - self.position[1])
-            if self.drill is not None and target_distance < self.hit_check_range + self.selected_target.hit_check_range + 30:
+            if target_distance < self.hit_check_range + self.selected_target.hit_check_range + 30:
                 self.rotate_towards(self.selected_target.position)
                 self.decelerate()
+                if self.drill is not None:
+                    self.mine()
             else:
                 self.move_to(self.selected_target.position)
+
+    def mine(self) -> None:
+        if self.target_cell and self.selected_target.body[self.target_cell[1]][self.target_cell[0]] != 0:
+            self.mining_charge += 1
+            if self.mining_charge >= 60:
+                self.selected_target.handel_damage(self.target_cell[0], self.target_cell[1], 2)
+                self.target_cell = None
+                self.mining_charge = 0
+        else:
+            for y in range(len(self.selected_target.body)):
+                for x in range(len(self.selected_target.body[y])):
+                    if self.selected_target.body[y][x] != 0:
+                        self.target_cell = x, y
+                        return
 
     def handel_damage(self, x: int, y: int, damage: int) -> bool:
         if 0 <= y < len(self.body) and 0 <= x < len(self.body[0]):
@@ -425,12 +479,19 @@ class Miner(StarShip):
             elif self.body[y][x] == 3:
                 self.mining_charge = 0
                 self.drill = None
+                self.mining_charge = 0
+                self.target_cell = None
                 self.body[y][x] = 0
                 if self.hull is not None:
                     self.hull -= 1
                 self.cells -= 1
                 return True
         return False
+
+    def deactivate(self) -> None:
+        StarShip.deactivate(self)
+        self.mining_charge = 0
+        self.target_cell = None
 
 
 class Asteroid (SpaceObject):
