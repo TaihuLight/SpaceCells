@@ -2,7 +2,7 @@
 import pygame
 from game_map import GameMap
 from typing import Tuple
-from spaceship import StarShip
+from spaceship import StarShip, Asteroid
 
 
 class Visualiser:
@@ -111,9 +111,13 @@ class Visualiser:
                 if space_object.selected_target is not None:
                     target_ship = space_object.selected_target
                     true_target_position = self.game_map.true_to_screen(target_ship.position)
-                    pygame.draw.circle(self.screen, (255, 0, 0), true_target_position,
+                    if space_object.selected_target.faction == 'neutral':
+                        target_colour = (255, 255, 35)
+                    else:
+                        target_colour = (255, 0, 0)
+                    pygame.draw.circle(self.screen, target_colour, true_target_position,
                                        int(target_ship.hit_check_range * self.game_map.zoom), 2)
-                    pygame.draw.line(self.highlight_screen, (255, 0, 0), true_position, true_target_position)
+                    pygame.draw.line(self.highlight_screen, target_colour, true_position, true_target_position)
                 # Draw destination circle and line
                 elif space_object.destination is not None:
                     true_destination = self.game_map.true_to_screen(space_object.destination)

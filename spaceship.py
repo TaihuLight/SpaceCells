@@ -61,6 +61,9 @@ class SpaceObject:
                 if number != 0:
                     self.cells += 1
 
+    def update(self, bullets: List[Bullet]) -> None:
+        raise NotImplementedError
+
     def ship_to_true(self, point: Tuple[int, int]) -> Tuple[float, float]:
         x = point[0] * cos(self.rotation) - point[1] * sin(self.rotation) + int(self.position[0])
         y = point[1] * cos(self.rotation) + point[0] * sin(self.rotation) + int(self.position[1])
@@ -80,6 +83,16 @@ class SpaceObject:
         self.rotation = self.rotation % (2 * pi)
         self.position = self.position[0] + self.velocity_x, self.position[1] + self.velocity_y
 
+    def check_damage_from_bullets(self, bullets: List[Bullet]) -> None:
+        for bullet in bullets:
+            if bullet.faction != self.faction and hypot(bullet.position[0] - self.position[0],
+                                                        bullet.position[1] - self.position[1]) < self.hit_check_range:
+                ship_bullet_position = self.true_to_ship(bullet.position)
+                x = (ship_bullet_position[0] + int(len(self.body[0]) / 2 * cell_size)) // cell_size
+                y = (ship_bullet_position[1] + int(len(self.body) / 2 * cell_size)) // cell_size
+                if self.handel_damage(x, y, bullet.damage):
+                    bullets.remove(bullet)
+
     def handel_damage(self, x: int, y: int, damage: int) -> bool:
         raise NotImplementedError
 
@@ -97,8 +110,8 @@ class SpaceObject:
                 if self.body[y][x] != 0:
                     base_point_x = point1[0] + x_difference * x - y_difference * y
                     base_point_y = point1[1] + y_difference * x + x_difference * y
-                    object2_x = int((base_point_x + len(self.body[0]) / 2 * cell_size) // cell_size)
-                    object2_y = int((base_point_y + len(self.body) / 2 * cell_size) // cell_size)
+                    object2_x = int((base_point_x + len(object2.body[0]) / 2 * cell_size) / cell_size)
+                    object2_y = int((base_point_y + len(object2.body) / 2 * cell_size) / cell_size)
                     if object2.handel_damage(object2_x, object2_y, 2):
                         self.handel_damage(x, y, 2)
 
@@ -115,12 +128,6 @@ class StarShip(SpaceObject):
         If this ship is currently selected by the player
     max_speed:
         Highest velocity the ship can have
-    turrets:
-        Location of all turrets in the body array
-    cannons:
-        Location of all cannons in the body array
-    cannon_cooldown:
-        How many ticks until the cannons can fire again
     close_targets:
         A list of angles between this ship and enemy ships in close range
     medium_targets:
@@ -135,12 +142,9 @@ class StarShip(SpaceObject):
     destination: Optional[Tuple[int, int]]
     selected: bool
     max_speed: float
-    turrets: Dict[Tuple[int, int], int]
-    cannons: List[Tuple[int, int]]
-    cannon_cooldown: int
     close_targets: List[float]
     medium_targets: List[float]
-    selected_target: StarShip
+    selected_target: Optional[StarShip]
     close_ships: Dict[float, StarShip]
 
     def __init__(self, name: str, body: List[List[int]], faction: str, position: Tuple[int, int],
@@ -152,25 +156,14 @@ class StarShip(SpaceObject):
         self.destination = None
         self.selected = False
         self.max_speed = max_speed
-        self.turrets = {}
-        self.cannons = []
-        self.cannon_cooldown = total_cannon_cooldown
         self.close_targets = []
         self.medium_targets = []
         self.selected_target = None
         self.close_ships = {}
-        for i, sublist in enumerate(self.body):
-            for j, number in enumerate(sublist):
-                if number == 1 or number == 2:
-                    self.hull += 1
-                elif number == 3:
-                    self.turrets[i, j] = randint(0, turret_cooldown)
-                    self.hull += 1
-                elif number == 4:
-                    self.cannons.append((i, j))
-                    self.hull += 1
+        self.set_hull()
 
-        self.hull = self.hull // 3
+    def set_hull(self) -> None:
+        raise NotImplementedError
 
     def update(self, bullets: List[Bullet]) -> None:
         if self.destination is not None:
@@ -179,18 +172,7 @@ class StarShip(SpaceObject):
                     < self.hit_check_range:
                 self.destination = None
         elif self.selected_target is not None:
-            if self.selected_target.faction == 'neutral' or self.selected_target.faction == self.faction:
-                self.selected_target = None
-            else:
-                target_distance = hypot(self.selected_target.position[0] - self.position[0],
-                                        self.selected_target.position[1] - self.position[1])
-                if len(self.cannons) > 0 and target_distance < medium_range:
-                    self.rotate_towards(self.selected_target.position)
-                    self.decelerate()
-                elif target_distance < short_range:
-                    self.decelerate()
-                else:
-                    self.move_to(self.selected_target.position)
+            self.handel_target()
         else:
             self.decelerate()
 
@@ -204,6 +186,9 @@ class StarShip(SpaceObject):
             velocity_angle = atan2(self.velocity_y, self.velocity_x)
             self.velocity_x = self.max_speed * cos(velocity_angle)
             self.velocity_y = self.max_speed * sin(velocity_angle)
+
+    def handel_target(self) -> None:
+        raise NotImplementedError
 
     def rotate_towards(self, destination: Tuple[float, float]) -> None:
         x = destination[0] - self.position[0]
@@ -245,12 +230,39 @@ class StarShip(SpaceObject):
         raise NotImplementedError
 
 
-class Corvette(StarShip):
-    """A corvette class ship with turrets and cannons
+class Battleship(StarShip):
+    """A battleship class ship with turrets and cannons
+    turrets:
+        Location of all turrets in the body array
+    cannons:
+        Location of all cannons in the body array
+    cannon_cooldown:
+        How many ticks until the cannons can fire again
     """
+    turrets: Dict[Tuple[int, int], int]
+    cannons: List[Tuple[int, int]]
+    cannon_cooldown: int
+
     def __init__(self, name: str, body: List[List[int]], faction: str, position: Tuple[int, int],
                  acceleration: float, turn_speed: float, max_speed: float):
+        self.turrets = {}
+        self.cannons = []
+        self.cannon_cooldown = total_cannon_cooldown
         StarShip.__init__(self, name, body, faction, position, acceleration, turn_speed, max_speed)
+
+    def set_hull(self) -> None:
+        for i, sublist in enumerate(self.body):
+            for j, number in enumerate(sublist):
+                if number == 1 or number == 2:
+                    self.hull += 1
+                elif number == 3:
+                    self.turrets[i, j] = randint(0, turret_cooldown)
+                    self.hull += 1
+                elif number == 4:
+                    self.cannons.append((i, j))
+                    self.hull += 1
+
+        self.hull = self.hull // 3
 
     def update(self, bullets: List[Bullet]) -> None:
         StarShip.update(self, bullets)
@@ -295,15 +307,19 @@ class Corvette(StarShip):
         SpaceObject.update_position(self)
         self.check_damage_from_bullets(bullets)
 
-    def check_damage_from_bullets(self, bullets: List[Bullet]) -> None:
-        for bullet in bullets:
-            if bullet.faction != self.faction and hypot(bullet.position[0] - self.position[0],
-                                                        bullet.position[1] - self.position[1]) < self.hit_check_range:
-                ship_bullet_position = self.true_to_ship(bullet.position)
-                x = (ship_bullet_position[0] + int(len(self.body[0]) / 2 * cell_size)) // cell_size
-                y = (ship_bullet_position[1] + int(len(self.body) / 2 * cell_size)) // cell_size
-                if self.handel_damage(x, y, bullet.damage):
-                    bullets.remove(bullet)
+    def handel_target(self) -> None:
+        if self.selected_target.faction == 'neutral' or self.selected_target.faction == self.faction:
+            self.selected_target = None
+        else:
+            target_distance = hypot(self.selected_target.position[0] - self.position[0],
+                                    self.selected_target.position[1] - self.position[1])
+            if len(self.cannons) > 0 and target_distance < medium_range:
+                self.rotate_towards(self.selected_target.position)
+                self.decelerate()
+            elif target_distance < short_range:
+                self.decelerate()
+            else:
+                self.move_to(self.selected_target.position)
 
     def handel_damage(self, x: int, y: int, damage: int) -> bool:
         if 0 <= y < len(self.body) and 0 <= x < len(self.body[0]):
@@ -342,6 +358,81 @@ class Corvette(StarShip):
         return False
 
 
+class Miner(StarShip):
+    """Worker ship that can mine and salvage
+    drill:
+        Location of the drill in the body array
+    mining_charge:
+        Charge of the drill
+    """
+    drill: Optional[Tuple[int, int]]
+    mining_charge: int
+
+    def __init__(self, name: str, body: List[List[int]], faction: str, position: Tuple[int, int],
+                 acceleration: float, turn_speed: float, max_speed: float):
+        self.mining_charge = 0
+        StarShip.__init__(self, name, body, faction, position, acceleration, turn_speed, max_speed)
+
+    def set_hull(self) -> None:
+        for i, sublist in enumerate(self.body):
+            for j, number in enumerate(sublist):
+                if number == 1 or number == 2:
+                    self.hull += 1
+                elif number == 3:
+                    self.drill = i, j
+                    self.hull += 1
+
+        self.hull = self.hull // 3
+
+    def update(self, bullets: List[Bullet]) -> None:
+        StarShip.update(self, bullets)
+
+        SpaceObject.update_position(self)
+        self.check_damage_from_bullets(bullets)
+
+    def handel_target(self) -> None:
+        if self.selected_target.cells <= 0:
+            self.selected_target = None
+        else:
+            target_distance = hypot(self.selected_target.position[0] - self.position[0],
+                                    self.selected_target.position[1] - self.position[1])
+            if self.drill is not None and target_distance < self.hit_check_range + self.selected_target.hit_check_range + 30:
+                self.rotate_towards(self.selected_target.position)
+                self.decelerate()
+            else:
+                self.move_to(self.selected_target.position)
+
+    def handel_damage(self, x: int, y: int, damage: int) -> bool:
+        if 0 <= y < len(self.body) and 0 <= x < len(self.body[0]):
+            if self.body[y][x] == 0:
+                return False
+            elif self.body[y][x] == 1:
+                self.body[y][x] = 0
+                if self.hull is not None:
+                    self.hull -= 1
+                self.cells -= 1
+                return True
+            elif self.body[y][x] == 2:
+                if damage == 1:
+                    self.body[y][x] = 1
+                    return True
+                elif damage == 2:
+                    self.body[y][x] = 0
+                    if self.hull is not None:
+                        self.hull -= 1
+                    self.cells -= 1
+                    return True
+            elif self.body[y][x] == 3:
+                self.mining_charge = 0
+                self.drill = None
+                self.body[y][x] = 0
+                if self.hull is not None:
+                    self.hull -= 1
+                self.cells -= 1
+                return True
+        return False
+
+
 class Asteroid (SpaceObject):
     """A mineable asteroid
     """
@@ -353,16 +444,6 @@ class Asteroid (SpaceObject):
         self.check_damage_from_bullets(bullets)
         self.rotation += 0.001
         SpaceObject.update_position(self)
-
-    def check_damage_from_bullets(self, bullets: List[Bullet]) -> None:
-        for bullet in bullets:
-            if hypot(bullet.position[0] - self.position[0],
-                     bullet.position[1] - self.position[1]) < self.hit_check_range:
-                ship_bullet_position = self.true_to_ship(bullet.position)
-                x = (ship_bullet_position[0] + int(len(self.body[0]) / 2 * cell_size)) // cell_size
-                y = (ship_bullet_position[1] + int(len(self.body) / 2 * cell_size)) // cell_size
-                if self.handel_damage(x, y, bullet.damage):
-                    bullets.remove(bullet)
 
     def handel_damage(self, x: int, y: int, damage: int) -> bool:
         if 0 <= y < len(self.body) and 0 <= x < len(self.body[0]):
