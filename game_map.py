@@ -34,6 +34,8 @@ class GameMap:
         all bullets on the game map
     update_target_time:
         time until targets for all ships gets updates
+    resources:
+        The type and amount of the player's resources
     """
     width: int
     height: int
@@ -47,6 +49,7 @@ class GameMap:
     selected_ships: List[StarShip]
     bullets: List[Bullet]
     update_target_time: int
+    resources: Dict[str, int]
 
     def __init__(self, size: int, width: int, height: int) -> None:
         self.width = width
@@ -61,6 +64,7 @@ class GameMap:
         self.selected_ships = []
         self.bullets = []
         self.update_target_time = update_target_total_time
+        self.resources = {'alloy': 0, 'crystal': 0, 'scrap': 0}
         if test_env:
             self.create_space_object('asteroid', (700, 700))
             self.create_space_object('corvette', (500, 500))
@@ -258,7 +262,7 @@ class GameMap:
                     [0, 0, 2, 2, 3, 2],
                     [0, 2, 2, 2, 2, 2],
                     [2, 2, 2, 0, 0, 0]]
-            new_space_object = Miner(name, body, 'player', position, 0.01, 0.05, 1)
+            new_space_object = Miner(name, body, 'player', position, 0.01, 0.05, 1, self.resources)
             self.all_ships['player'].append(new_space_object)
         elif name == 'gunboat':
             body = [[0, 2, 0, 2, 2, 2, 0],
@@ -303,5 +307,5 @@ class GameMap:
                     else:
                         row.append(0)
                 body.append(row)
-            new_space_object = Asteroid(name, body, 'neutral', position)
+            new_space_object = Asteroid(name, body, 'neutral', position, 'alloy')
         self.space_objects.append(new_space_object)

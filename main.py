@@ -9,12 +9,13 @@ test_env = False
 
 
 def game_loop():
-    """
+    #"""
     pr = cProfile.Profile()
     pr.enable()
     tick = 0
-    """
+    #"""
 
+    pygame.init()
     game_running = True
     game_map = GameMap(2000, 1600, 900)
     visualiser = Visualiser(1600, 900, game_map, 10)
@@ -24,7 +25,6 @@ def game_loop():
         pods = [PodManager(game_map, game_map.all_ships['pirate'][0:3]),
                 PodManager(game_map, game_map.all_ships['pirate'][3:6]),
                 PodManager(game_map, game_map.all_ships['pirate'][6:9])]
-    pygame.init()
     right_mouse_pressed = False
     clicked_mouse_position = None
     fps = 60
@@ -103,7 +103,7 @@ def game_loop():
                 pod_update_time -= 1
         visualiser.render_game(clicked_mouse_position)
 
-        """
+        #"""
         tick += 1
         if tick == 1000:
             pr.disable()
@@ -113,7 +113,7 @@ def game_loop():
             ps.print_stats()
             print(s.getvalue())
             game_running = False
-        """
+        #"""
 
 
 if __name__ == '__main__':

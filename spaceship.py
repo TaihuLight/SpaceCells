@@ -105,6 +105,9 @@ class SpaceObject:
     def handel_damage(self, x: int, y: int, damage: int) -> bool:
         raise NotImplementedError
 
+    def handel_mine(self, x: int, y: int, player_resources: Dict[str, int]) -> None:
+        raise NotImplementedError
+
     def handel_collision(self, object2: SpaceObject):
         top_left_point = cell_size * (-len(self.body[0]) / 2) + cell_size//2, \
                          cell_size * (-len(self.body) / 2) + cell_size//2
@@ -245,6 +248,10 @@ class StarShip(SpaceObject):
 
     def handel_damage(self, x: int, y: int, damage: int) -> bool:
         raise NotImplementedError
+
+    def handel_mine(self, x: int, y: int, player_resources: Dict[str, int]) -> None:
+        if self.handel_damage(x, y, 2):
+            player_resources['scrap'] += 1
 
     def deactivate(self) -> None:
         self.faction = 'neutral'
@@ -393,15 +400,19 @@ class Miner(StarShip):
         Charge of the drill
     target_cell:
         Location of the cell being mined in selected target's body
+    player_resources:
+        The type and amount of the player's resources
     """
     drill: Optional[Tuple[int, int]]
     mining_charge: int
     target_cell: Optional[Tuple[int, int]]
+    player_resources: Dict[str, int]
 
     def __init__(self, name: str, body: List[List[int]], faction: str, position: Tuple[int, int],
-                 acceleration: float, turn_speed: float, max_speed: float):
+                 acceleration: float, turn_speed: float, max_speed: float, resources: Dict[str, int]):
         self.mining_charge = 0
         self.target_cell = None
+        self.player_resources = resources
         StarShip.__init__(self, name, body, faction, position, acceleration, turn_speed, max_speed)
 
     def set_hull(self) -> None:
@@ -426,6 +437,11 @@ class Miner(StarShip):
         self.mining_charge = 0
         self.target_cell = None
 
+    def set_target(self, target: SpaceObject) -> None:
+        StarShip.set_target(self, target)
+        self.mining_charge = 0
+        self.target_cell = None
+
     def handel_target(self) -> None:
         if self.selected_target.cells <= 0:
             self.selected_target = None
@@ -446,7 +462,7 @@ class Miner(StarShip):
         if self.target_cell and self.selected_target.body[self.target_cell[1]][self.target_cell[0]] != 0:
             self.mining_charge += 1
             if self.mining_charge >= 60:
-                self.selected_target.handel_damage(self.target_cell[0], self.target_cell[1], 2)
+                self.selected_target.handel_mine(self.target_cell[0], self.target_cell[1], self.player_resources)
                 self.target_cell = None
                 self.mining_charge = 0
         else:
@@ -496,10 +512,16 @@ class Miner(StarShip):
 
 class Asteroid (SpaceObject):
     """A mineable asteroid
+    resource:
+        Resources obtained when this asteroid is mined
     """
-    def __init__(self, name: str, body: List[List[int]], faction: str, position: Tuple[int, int]) -> None:
+    resource: str
+
+    def __init__(self, name: str, body: List[List[int]], faction: str,
+                 position: Tuple[int, int], resource: str) -> None:
         SpaceObject.__init__(self, name, body, faction, position)
         self.rotation = randint(0, 628) / 100
+        self.resource = resource
 
     def update(self, bullets: List[Bullet]) -> None:
         self.check_damage_from_bullets(bullets)
@@ -513,6 +535,11 @@ class Asteroid (SpaceObject):
                 self.cells -= 1
                 return True
         return False
+
+    def handel_mine(self, x: int, y: int, player_resources: Dict[str, int]) -> None:
+        if self.body[y][x] == 2:
+            player_resources[self.resource] += 1
+        self.handel_damage(x, y, 2)
 
 
 class Bullet:
