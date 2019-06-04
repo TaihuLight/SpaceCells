@@ -64,7 +64,7 @@ class GameMap:
         self.selected_ships = []
         self.bullets = []
         self.update_target_time = update_target_total_time
-        self.resources = {'alloy': 0, 'crystal': 0, 'scrap': 0}
+        self.resources = {'alloy': 10, 'crystal': 10, 'scrap': 0}
         if test_env:
             self.create_space_object('asteroid', (700, 700))
             self.create_space_object('corvette', (500, 500))
@@ -143,18 +143,17 @@ class GameMap:
         if self.selected_ships:
             true_mouse_position = self.screen_to_true(pygame.mouse.get_pos())
             for space_object in self.space_objects:
-                if space_object.faction != 'player':
-                    if hypot(true_mouse_position[0] - space_object.position[0],
-                             true_mouse_position[1] - space_object.position[1]) < space_object.hit_check_range:
-                        if space_object.faction == 'neutral':
-                            for selected_ship in self.selected_ships:
-                                if isinstance(selected_ship, Miner):
-                                    selected_ship.set_target(space_object)
-                        else:
-                            for selected_ship in self.selected_ships:
-                                if not isinstance(selected_ship, Miner):
-                                    selected_ship.set_target(space_object)
-                        return
+                if hypot(true_mouse_position[0] - space_object.position[0],
+                         true_mouse_position[1] - space_object.position[1]) < space_object.hit_check_range:
+                    if space_object.faction == 'player' or space_object.faction == 'neutral':
+                        for selected_ship in self.selected_ships:
+                            if isinstance(selected_ship, Miner):
+                                selected_ship.set_target(space_object)
+                    else:
+                        for selected_ship in self.selected_ships:
+                            if not isinstance(selected_ship, Miner):
+                                selected_ship.set_target(space_object)
+                    return
 
             # Only run if no enemy ship selected
             self.set_destination(true_mouse_position)

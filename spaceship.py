@@ -148,6 +148,10 @@ class StarShip(SpaceObject):
         Enemy ship that is being targeted by this ship
     close_ships:
         A dictionary where keys are distances and values are enemy ships
+    repair_cost:
+        Type and amount of resources required to repair this ship
+    repair_stack:
+        Stack of the positions, type, and required resource of this ship's destroyed cells
     """
     acceleration: float
     turn_speed: float
@@ -158,6 +162,8 @@ class StarShip(SpaceObject):
     medium_targets: List[float]
     selected_target: Optional[SpaceObject]
     close_ships: Dict[float, StarShip]
+    repair_stack: List[Tuple[int, int, int, str]]
+    repair_cost: Dict[str, int]
 
     def __init__(self, name: str, body: List[List[int]], faction: str, position: Tuple[int, int],
                  acceleration: float, turn_speed: float, max_speed: float) -> None:
@@ -173,6 +179,8 @@ class StarShip(SpaceObject):
         self.selected_target = None
         self.close_ships = {}
         self.set_hull()
+        self.repair_stack = []
+        self.repair_cost = {'alloy': 0, 'crystal': 0}
 
     def set_hull(self) -> None:
         raise NotImplementedError
@@ -253,6 +261,9 @@ class StarShip(SpaceObject):
         if self.handel_damage(x, y, 2):
             player_resources['scrap'] += 1
 
+    def handel_repair(self, x: int, y: int, cell_number: int) -> None:
+        raise NotImplementedError
+
     def deactivate(self) -> None:
         self.faction = 'neutral'
         self.destination = None
@@ -290,10 +301,10 @@ class Battleship(StarShip):
                 if number == 1 or number == 2:
                     self.hull += 1
                 elif number == 3:
-                    self.turrets[i, j] = randint(0, turret_cooldown)
+                    self.turrets[j, i] = randint(0, turret_cooldown)
                     self.hull += 1
                 elif number == 4:
-                    self.cannons.append((i, j))
+                    self.cannons.append((j, i))
                     self.hull += 1
 
         self.hull = self.hull // 3
@@ -307,8 +318,8 @@ class Battleship(StarShip):
                 self.turrets[turret_pos] -= 1
                 if self.turrets[turret_pos] == 0:
                     position = self.ship_to_true(
-                        (int(cell_size * (turret_pos[1] - len(self.body[0]) / 2) + cell_size // 2),
-                         int(cell_size * (turret_pos[0] - len(self.body) / 2) + cell_size // 2)))
+                        (int(cell_size * (turret_pos[0] - len(self.body[0]) / 2) + cell_size // 2),
+                         int(cell_size * (turret_pos[1] - len(self.body) / 2) + cell_size // 2)))
                     rotation = self.close_targets[randint(0, len(self.close_targets) - 1)]
                     new_bullet = Bullet(position, rotation, self.faction, 1)
                     bullets.append(new_bullet)
@@ -331,8 +342,8 @@ class Battleship(StarShip):
         if cannons_fire:
             for cannon_pos in self.cannons:
                 position = self.ship_to_true(
-                    (int(cell_size * (cannon_pos[1] - len(self.body[0]) / 2) + cell_size // 2),
-                     int(cell_size * (cannon_pos[0] - len(self.body) / 2) + cell_size // 2)))
+                    (int(cell_size * (cannon_pos[0] - len(self.body[0]) / 2) + cell_size // 2),
+                     int(cell_size * (cannon_pos[1] - len(self.body) / 2) + cell_size // 2)))
                 rotation = self.rotation
                 new_bullet = Bullet(position, rotation, self.faction, 2)
                 bullets.append(new_bullet)
@@ -364,32 +375,65 @@ class Battleship(StarShip):
                 if self.hull is not None:
                     self.hull -= 1
                 self.cells -= 1
+                self.repair_stack.append((x, y, 1, 'alloy'))
+                self.repair_cost['alloy'] += 1
                 return True
             elif self.body[y][x] == 2:
                 if damage == 1:
                     self.body[y][x] = 1
+                    self.repair_stack.append((x, y, 2, 'alloy'))
+                    self.repair_cost['alloy'] += 1
                     return True
                 elif damage == 2:
                     self.body[y][x] = 0
                     if self.hull is not None:
                         self.hull -= 1
                     self.cells -= 1
+                    self.repair_stack.append((x, y, 2, 'alloy'))
+                    self.repair_stack.append((x, y, 1, 'alloy'))
+                    self.repair_cost['alloy'] += 2
                     return True
             elif self.body[y][x] == 3:
-                del self.turrets[(y, x)]
+                del self.turrets[(x, y)]
                 self.body[y][x] = 0
                 if self.hull is not None:
                     self.hull -= 1
                 self.cells -= 1
+                self.repair_stack.append((x, y, 3, 'crystal'))
+                self.repair_cost['crystal'] += 1
                 return True
             elif self.body[y][x] == 4:
-                self.cannons.remove((y, x))
+                self.cannons.remove((x, y))
                 self.body[y][x] = 0
                 if self.hull is not None:
                     self.hull -= 1
                 self.cells -= 1
+                self.repair_stack.append((x, y, 4, 'crystal'))
+                self.repair_cost['crystal'] += 1
                 return True
         return False
+
+    def handel_repair(self, x: int, y: int, cell_number: int) -> None:
+        if cell_number == 1:
+            self.body[y][x] = 1
+            self.hull += 1
+            self.cells += 1
+            self.repair_cost['alloy'] -= 1
+        elif cell_number == 2:
+            self.body[y][x] = 2
+            self.repair_cost['alloy'] -= 1
+        elif cell_number == 3:
+            self.body[y][x] = 3
+            self.turrets[x, y] = 0
+            self.hull += 1
+            self.cells += 1
+            self.repair_cost['crystal'] -= 1
+        elif cell_number == 4:
+            self.body[y][x] = 4
+            self.cannons.append((x, y))
+            self.hull += 1
+            self.cells += 1
+            self.repair_cost['crystal'] -= 1
 
 
 class Miner(StarShip):
@@ -454,8 +498,12 @@ class Miner(StarShip):
                 self.rotate_towards(self.selected_target.position)
                 self.decelerate()
                 if self.drill is not None:
-                    self.mine()
+                    if self.selected_target.faction == 'neutral':
+                        self.mine()
+                    elif self.selected_target.faction == 'player':
+                        self.repair()
             else:
+                self.target_cell = None
                 self.move_to(self.selected_target.position)
 
     def mine(self) -> None:
@@ -472,6 +520,27 @@ class Miner(StarShip):
                         self.target_cell = x, y
                         return
 
+    def repair(self) -> None:
+        repair_stack = self.selected_target.repair_stack
+        if repair_stack:
+            current_index = len(repair_stack) - 1
+            while current_index >= 0:
+                repair_order = repair_stack[current_index]
+                if self.player_resources[repair_order[3]] > 0:
+                    self.target_cell = repair_order[0], repair_order[1]
+                    self.mining_charge += 1
+                    if self.mining_charge >= 60:
+                        self.selected_target.handel_repair(repair_order[0], repair_order[1], repair_order[2])
+                        repair_stack.pop(current_index)
+                        self.player_resources[repair_order[3]] -= 1
+                        self.target_cell = None
+                        self.mining_charge = 0
+                    return
+                current_index -= 1
+            self.target_cell = None
+        else:
+            self.target_cell = None
+
     def handel_damage(self, x: int, y: int, damage: int) -> bool:
         if 0 <= y < len(self.body) and 0 <= x < len(self.body[0]):
             if self.body[y][x] == 0:
@@ -481,16 +550,23 @@ class Miner(StarShip):
                 if self.hull is not None:
                     self.hull -= 1
                 self.cells -= 1
+                self.repair_stack.append((x, y, 1, 'alloy'))
+                self.repair_cost['alloy'] += 1
                 return True
             elif self.body[y][x] == 2:
                 if damage == 1:
                     self.body[y][x] = 1
+                    self.repair_stack.append((x, y, 2, 'alloy'))
+                    self.repair_cost['alloy'] += 1
                     return True
                 elif damage == 2:
                     self.body[y][x] = 0
                     if self.hull is not None:
                         self.hull -= 1
                     self.cells -= 1
+                    self.repair_stack.append((x, y, 2, 'alloy'))
+                    self.repair_stack.append((x, y, 1, 'alloy'))
+                    self.repair_cost['alloy'] += 2
                     return True
             elif self.body[y][x] == 3:
                 self.mining_charge = 0
@@ -501,8 +577,26 @@ class Miner(StarShip):
                 if self.hull is not None:
                     self.hull -= 1
                 self.cells -= 1
+                self.repair_stack.append((x, y, 3, 'crystal'))
+                self.repair_cost['crystal'] += 1
                 return True
         return False
+
+    def handel_repair(self, x: int, y: int, cell_number: int) -> None:
+        if cell_number == 1:
+            self.body[y][x] = 1
+            self.hull += 1
+            self.cells += 1
+            self.repair_cost['alloy'] -= 1
+        elif cell_number == 2:
+            self.body[y][x] = 2
+            self.repair_cost['alloy'] -= 1
+        elif cell_number == 3:
+            self.body[y][x] = 3
+            self.drill = (x, y)
+            self.hull += 1
+            self.cells += 1
+            self.repair_cost['crystal'] -= 1
 
     def deactivate(self) -> None:
         StarShip.deactivate(self)

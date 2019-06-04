@@ -9,11 +9,11 @@ test_env = False
 
 
 def game_loop():
-    #"""
+    """
     pr = cProfile.Profile()
     pr.enable()
     tick = 0
-    #"""
+    """
 
     pygame.init()
     game_running = True
@@ -103,7 +103,7 @@ def game_loop():
                 pod_update_time -= 1
         visualiser.render_game(clicked_mouse_position)
 
-        #"""
+        """
         tick += 1
         if tick == 1000:
             pr.disable()
@@ -113,7 +113,7 @@ def game_loop():
             ps.print_stats()
             print(s.getvalue())
             game_running = False
-        #"""
+        """
 
 
 if __name__ == '__main__':
