@@ -64,6 +64,7 @@ class Visualiser:
         self.highlight_screen = pygame.Surface((window_width, window_height))
         self.highlight_screen.set_colorkey((0, 0, 0))
         self.highlight_screen.set_alpha(100)
+        self.highlight_screen.convert()
 
     def render_game(self, clicked_mouse_position: Tuple[int, int]) -> None:
         """Render game to the screen
@@ -172,16 +173,20 @@ class Visualiser:
 
     def draw_bullets(self) -> None:
         zoom = self.game_map.zoom
+        x_offset = self.game_map.x_offset
+        y_offset = self.game_map.y_offset
         for bullet in self.game_map.bullets:
-            if bullet.faction == 'player':
-                bullet_colour = (0, 70, 112)
-            elif bullet.faction == 'pirate':
-                bullet_colour = (210, 0, 64)
-            screen_position = self.game_map.true_to_screen(bullet.position)
-            if bullet.damage == 1:
-                pygame.draw.circle(self.screen, bullet_colour, screen_position, int(3 * zoom))
-            elif bullet.damage == 2:
-                pygame.draw.circle(self.screen, bullet_colour, screen_position, int(5 * zoom))
+            if (-x_offset <= bullet.position[0] <= -x_offset + self.width / zoom) and \
+                    (-y_offset <= bullet.position[1] <= -y_offset + self.height / zoom):
+                if bullet.faction == 'player':
+                    bullet_colour = (0, 70, 112)
+                elif bullet.faction == 'pirate':
+                    bullet_colour = (210, 0, 64)
+                screen_position = self.game_map.true_to_screen(bullet.position)
+                if bullet.damage == 1:
+                    pygame.draw.circle(self.screen, bullet_colour, screen_position, int(3 * zoom))
+                elif bullet.damage == 2:
+                    pygame.draw.circle(self.screen, bullet_colour, screen_position, int(5 * zoom))
 
     def draw_effects(self) -> None:
         while self.effects:
@@ -227,7 +232,12 @@ class Visualiser:
         self.screen.blit(self.number_sprites[self.game_map.resources['scrap'] % 10], (center - 54, 5))
 
         if self.game_map.selected_ships:
-            resource_cost = self.game_map.selected_ships[0].repair_cost
+            resource_cost = {}
+            for ship in self.game_map.selected_ships:
+                for resource in ship.repair_cost:
+                    if resource not in resource_cost:
+                        resource_cost[resource] = 0
+                    resource_cost[resource] += ship.repair_cost[resource]
             pygame.draw.rect(self.screen, (0, 153, 51), (0, self.height-100, len(resource_cost)*80, 100))
             y = self.height-30
             x = 0

@@ -14,7 +14,6 @@ def game_loop():
     pr.enable()
     tick = 0
     """
-
     pygame.init()
     game_running = True
     game_map = GameMap(2000, 1600, 900)

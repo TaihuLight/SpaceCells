@@ -36,6 +36,8 @@ class GameMap:
         time until targets for all ships gets updates
     resources:
         The type and amount of the player's resources
+    display_build_button:
+        If the build button is currently being displayed
     """
     width: int
     height: int
@@ -50,6 +52,7 @@ class GameMap:
     bullets: List[Bullet]
     update_target_time: int
     resources: Dict[str, int]
+    display_build_button: bool
 
     def __init__(self, size: int, width: int, height: int) -> None:
         self.width = width
@@ -65,12 +68,14 @@ class GameMap:
         self.bullets = []
         self.update_target_time = update_target_total_time
         self.resources = {'alloy': 10, 'crystal': 10, 'scrap': 0}
+        self.display_build_button = False
         if test_env:
             self.create_space_object('asteroid', (700, 700))
             self.create_space_object('corvette', (500, 500))
             self.create_space_object('corvette', (300, 600))
 
         else:
+            self.create_space_object('mothership', (-100, -100))
             self.create_space_object('corvette', (500, 500))
             self.create_space_object('corvette', (300, 600))
             self.create_space_object('corvette', (600, 300))
@@ -120,6 +125,8 @@ class GameMap:
                     < ship.hit_check_range:
                 ship.selected = True
                 self.selected_ships.append(ship)
+                if ship.name == 'mothership':
+                    self.display_build_button = True
 
     def check_selection_box(self, clicked_mouse_position: Tuple[int, int]) -> None:
         current_mouse_position = pygame.mouse.get_pos()
@@ -138,6 +145,7 @@ class GameMap:
         for ship in self.selected_ships:
             ship.selected = False
         self.selected_ships = []
+        self.display_build_button = False
 
     def handel_order(self) -> None:
         if self.selected_ships:
@@ -245,7 +253,25 @@ class GameMap:
                         object1.handel_collision(object2)
 
     def create_space_object(self, name: str, position: Tuple[int, int]) -> None:
-        if name == 'corvette':
+        if name == 'mothership':
+            body = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2, 3, 1, 1, 3, 2, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [2, 3, 1, 1, 1, 1, 2, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 2, 0, 0, 0, 0, 0, 2, 3, 1, 1, 3, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 0, 0, 0],
+                    [2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 0, 0],
+                    [0, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0],
+                    [0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4],
+                    [0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2],
+                    [0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4],
+                    [0, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 0],
+                    [2, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 0, 0],
+                    [2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 0, 0, 0],
+                    [2, 3, 1, 1, 1, 1, 2, 0, 0, 0, 0, 2, 1, 1, 1, 1, 1, 1, 2, 0, 0, 0, 0, 0, 2, 3, 1, 1, 3, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2, 3, 1, 1, 3, 2, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
+            new_space_object = Battleship(name, body, 'player', position, 0.005, 0.003, 0.5)
+            self.all_ships['player'].append(new_space_object)
+        elif name == 'corvette':
             body = [[2, 2, 2, 2, 0, 0, 0, 0, 0, 0],
                     [2, 1, 1, 2, 2, 2, 2, 4, 0, 0],
                     [0, 0, 1, 1, 3, 1, 1, 1, 2, 0],
