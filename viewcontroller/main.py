@@ -1,10 +1,9 @@
 import pygame
-from visualiser import Visualiser
-from game_map import GameMap
-from enemy_ai import PodManager
+from viewcontroller.visualiser import Visualiser
+from model.game_map import GameMap
+from viewcontroller.enemy_ai import PodManager
 import time
-import cProfile, pstats, io
-from pstats import SortKey
+
 test_env = False
 
 

@@ -1,7 +1,6 @@
-# Commit message change
 import pygame
 from typing import Tuple, List, Dict
-from spaceship import StarShip, Bullet, short_range, medium_range, Battleship, Miner, Asteroid
+from model.spaceship import StarShip, Bullet, short_range, medium_range, Battleship, Miner, Asteroid
 from math import hypot, atan2
 from random import randint
 update_target_total_time = 5

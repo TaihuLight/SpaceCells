@@ -1,5 +1,5 @@
-from game_map import GameMap
-from spaceship import StarShip
+from model.game_map import GameMap
+from model.spaceship import StarShip
 from typing import List
 from random import choice, randint
 

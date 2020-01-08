@@ -1,8 +1,8 @@
-# Commit message change
 import pygame
-from game_map import GameMap
-from typing import Tuple, Any, List, Dict
-from spaceship import StarShip, Asteroid, Miner
+from model.game_map import GameMap
+from typing import Tuple, Any, List
+from model.spaceship import StarShip, Miner
+from pathlib import Path
 import os
 
 
@@ -42,29 +42,22 @@ class Visualiser:
         self.width = window_width
         self.height = window_height
         self.screen = pygame.display.set_mode((window_width, window_height))
-        self.game_map = game_map
-        self.cell_size = cell_size
-        self.effects = []
-
-        self.resource_icons = {'alloy': pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\alloy_icon.png')),
-                               'crystal': pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\crystal_icon.png')),
-                               'scrap': pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\scrap_icon.png'))}
-        self.repair_icon = pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\repair_icon.png'))
-        self.number_sprites = [pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\0.png')),
-                               pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\1.png')),
-                               pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\2.png')),
-                               pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\3.png')),
-                               pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\4.png')),
-                               pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\5.png')),
-                               pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\6.png')),
-                               pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\7.png')),
-                               pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\8.png')),
-                               pygame.image.load(os.path.join(os.path.dirname(__file__), 'images\\9.png'))]
-
         self.highlight_screen = pygame.Surface((window_width, window_height))
         self.highlight_screen.set_colorkey((0, 0, 0))
         self.highlight_screen.set_alpha(100)
         self.highlight_screen.convert()
+        self.game_map = game_map
+        self.cell_size = cell_size
+        self.effects = []
+
+        images_path = os.path.join(Path(os.path.dirname(__file__)).parent, 'images')
+        self.resource_icons = {'alloy': pygame.image.load(os.path.join(images_path, 'alloy_icon.png')),
+                               'crystal': pygame.image.load(os.path.join(images_path, 'crystal_icon.png')),
+                               'scrap': pygame.image.load(os.path.join(images_path, 'scrap_icon.png'))}
+        self.repair_icon = pygame.image.load(os.path.join(images_path, 'repair_icon.png'))
+        self.number_sprites = []
+        for i in range(10):
+            self.number_sprites.append(pygame.image.load(os.path.join(images_path, str(i)+'.png')))
 
     def render_game(self, clicked_mouse_position: Tuple[int, int]) -> None:
         """Render game to the screen
