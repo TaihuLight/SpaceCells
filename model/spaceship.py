@@ -1,16 +1,8 @@
-# Commit message change
 from __future__ import annotations
+import constants
 from typing import List, Tuple, Optional, Dict
 from math import sin, cos, pi, atan2, hypot
 from random import randint
-
-
-cell_size = 10
-short_range = 500
-medium_range = 800
-turret_cooldown = 160
-total_cannon_cooldown = 160
-bullet_speed = 2
 
 
 class SpaceObject:
@@ -48,7 +40,7 @@ class SpaceObject:
     def __init__(self, name: str, body: List[List[int]], faction: str, position: Tuple[int, int]) -> None:
         self.name = name
         self.body = body
-        self.hit_check_range = int(hypot(len(body), len(body[0])) * cell_size // 2)
+        self.hit_check_range = int(hypot(len(body), len(body[0])) * constants.CELL_SIZE // 2)
         self.faction = faction
         self.position = position
         self.rotation = 0
@@ -82,10 +74,10 @@ class SpaceObject:
     def body_to_ship(self, position: Tuple[int, int]) -> Tuple[int, int]:
         x = position[0]
         y = position[1]
-        top_left_point = cell_size * (-len(self.body[0]) / 2) + cell_size // 2, \
-                         cell_size * (-len(self.body) / 2) + cell_size // 2
-        new_x = top_left_point[0] + cell_size * x
-        new_y = top_left_point[1] + cell_size * y
+        top_left_point = constants.CELL_SIZE * (-len(self.body[0]) / 2) + constants.CELL_SIZE // 2, \
+                         constants.CELL_SIZE * (-len(self.body) / 2) + constants.CELL_SIZE // 2
+        new_x = top_left_point[0] + constants.CELL_SIZE * x
+        new_y = top_left_point[1] + constants.CELL_SIZE * y
         return new_x, new_y
 
     def update_position(self):
@@ -97,8 +89,8 @@ class SpaceObject:
             if bullet.faction != self.faction and hypot(bullet.position[0] - self.position[0],
                                                         bullet.position[1] - self.position[1]) < self.hit_check_range:
                 ship_bullet_position = self.true_to_ship(bullet.position)
-                x = (ship_bullet_position[0] + int(len(self.body[0]) / 2 * cell_size)) // cell_size
-                y = (ship_bullet_position[1] + int(len(self.body) / 2 * cell_size)) // cell_size
+                x = (ship_bullet_position[0] + int(len(self.body[0]) / 2 * constants.CELL_SIZE)) // constants.CELL_SIZE
+                y = (ship_bullet_position[1] + int(len(self.body) / 2 * constants.CELL_SIZE)) // constants.CELL_SIZE
                 if self.handel_damage(x, y, bullet.damage):
                     bullets.remove(bullet)
 
@@ -109,10 +101,10 @@ class SpaceObject:
         raise NotImplementedError
 
     def handel_collision(self, object2: SpaceObject):
-        top_left_point = cell_size * (-len(self.body[0]) / 2) + cell_size//2, \
-                         cell_size * (-len(self.body) / 2) + cell_size//2
-        top_second_left_point = cell_size * (-len(self.body[0]) / 2) + cell_size + cell_size // 2, \
-                                cell_size * (-len(self.body) / 2) + cell_size // 2
+        top_left_point = constants.CELL_SIZE * (-len(self.body[0]) / 2) + constants.CELL_SIZE//2, \
+                         constants.CELL_SIZE * (-len(self.body) / 2) + constants.CELL_SIZE//2
+        top_second_left_point = constants.CELL_SIZE * (-len(self.body[0]) / 2) + constants.CELL_SIZE + constants.CELL_SIZE // 2, \
+                                constants.CELL_SIZE * (-len(self.body) / 2) + constants.CELL_SIZE // 2
         point1 = object2.true_to_ship_float(self.ship_to_true(top_left_point))
         point2 = object2.true_to_ship_float(self.ship_to_true(top_second_left_point))
         x_difference = point2[0] - point1[0]
@@ -122,8 +114,8 @@ class SpaceObject:
                 if self.body[y][x] != 0:
                     base_point_x = point1[0] + x_difference * x - y_difference * y
                     base_point_y = point1[1] + y_difference * x + x_difference * y
-                    object2_x = int((base_point_x + len(object2.body[0]) / 2 * cell_size) / cell_size)
-                    object2_y = int((base_point_y + len(object2.body) / 2 * cell_size) / cell_size)
+                    object2_x = int((base_point_x + len(object2.body[0]) / 2 * constants.CELL_SIZE) / constants.CELL_SIZE)
+                    object2_y = int((base_point_y + len(object2.body) / 2 * constants.CELL_SIZE) / constants.CELL_SIZE)
                     if object2.handel_damage(object2_x, object2_y, 2):
                         self.handel_damage(x, y, 2)
 
@@ -292,7 +284,7 @@ class Battleship(StarShip):
                  acceleration: float, turn_speed: float, max_speed: float):
         self.turrets = {}
         self.cannons = []
-        self.cannon_cooldown = total_cannon_cooldown
+        self.cannon_cooldown = constants.CANNON_COOLDOWN
         StarShip.__init__(self, name, body, faction, position, acceleration, turn_speed, max_speed)
 
     def set_hull(self) -> None:
@@ -301,7 +293,7 @@ class Battleship(StarShip):
                 if number == 1 or number == 2:
                     self.hull += 1
                 elif number == 3:
-                    self.turrets[j, i] = randint(0, turret_cooldown)
+                    self.turrets[j, i] = randint(0, constants.TURRET_COOLDOWN)
                     self.hull += 1
                 elif number == 4:
                     self.cannons.append((j, i))
@@ -318,12 +310,12 @@ class Battleship(StarShip):
                 self.turrets[turret_pos] -= 1
                 if self.turrets[turret_pos] <= 0:
                     position = self.ship_to_true(
-                        (int(cell_size * (turret_pos[0] - len(self.body[0]) / 2) + cell_size // 2),
-                         int(cell_size * (turret_pos[1] - len(self.body) / 2) + cell_size // 2)))
+                        (int(constants.CELL_SIZE * (turret_pos[0] - len(self.body[0]) / 2) + constants.CELL_SIZE // 2),
+                         int(constants.CELL_SIZE * (turret_pos[1] - len(self.body) / 2) + constants.CELL_SIZE // 2)))
                     rotation = self.close_targets[randint(0, len(self.close_targets) - 1)]
                     new_bullet = Bullet(position, rotation, self.faction, 1)
                     bullets.append(new_bullet)
-                    self.turrets[turret_pos] = turret_cooldown
+                    self.turrets[turret_pos] = constants.TURRET_COOLDOWN
 
         # Update this ship's cannons
         if self.cannon_cooldown > 0:
@@ -342,12 +334,12 @@ class Battleship(StarShip):
         if cannons_fire:
             for cannon_pos in self.cannons:
                 position = self.ship_to_true(
-                    (int(cell_size * (cannon_pos[0] - len(self.body[0]) / 2) + cell_size // 2),
-                     int(cell_size * (cannon_pos[1] - len(self.body) / 2) + cell_size // 2)))
+                    (int(constants.CELL_SIZE * (cannon_pos[0] - len(self.body[0]) / 2) + constants.CELL_SIZE // 2),
+                     int(constants.CELL_SIZE * (cannon_pos[1] - len(self.body) / 2) + constants.CELL_SIZE // 2)))
                 rotation = self.rotation
                 new_bullet = Bullet(position, rotation, self.faction, 2)
                 bullets.append(new_bullet)
-            self.cannon_cooldown = total_cannon_cooldown
+            self.cannon_cooldown = constants.CANNON_COOLDOWN
 
         SpaceObject.update_position(self)
         self.check_damage_from_bullets(bullets)
@@ -358,10 +350,10 @@ class Battleship(StarShip):
         else:
             target_distance = hypot(self.selected_target.position[0] - self.position[0],
                                     self.selected_target.position[1] - self.position[1])
-            if len(self.cannons) > 0 and target_distance < medium_range:
+            if len(self.cannons) > 0 and target_distance < constants.MEDIUM_RANGE:
                 self.rotate_towards(self.selected_target.position)
                 self.decelerate()
-            elif target_distance < short_range:
+            elif target_distance < constants.SHORT_RANGE:
                 self.decelerate()
             else:
                 self.move_to(self.selected_target.position)
@@ -658,8 +650,8 @@ class Bullet:
 
     def __init__(self, position: Tuple[float, float], rotation: float, faction: str, damage: int) -> None:
         self.position = position
-        self.velocity_x = bullet_speed * cos(rotation)
-        self.velocity_y = bullet_speed * sin(rotation)
+        self.velocity_x = constants.BULLET_SPEED * cos(rotation)
+        self.velocity_y = constants.BULLET_SPEED * sin(rotation)
         self.faction = faction
         self.damage = damage
         if damage == 1:

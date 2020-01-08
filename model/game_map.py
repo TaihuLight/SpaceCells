@@ -1,10 +1,9 @@
 import pygame
+import constants
 from typing import Tuple, List, Dict
-from model.spaceship import StarShip, Bullet, short_range, medium_range, Battleship, Miner, Asteroid
+from model.spaceship import StarShip, Bullet, Battleship, Miner, Asteroid
 from math import hypot, atan2
 from random import randint
-update_target_total_time = 5
-test_env = False
 
 
 class GameMap:
@@ -38,9 +37,6 @@ class GameMap:
     display_build_button:
         If the build button is currently being displayed
     """
-    width: int
-    height: int
-    size: int
     x_offset: int
     y_offset: int
     zoom: int
@@ -53,10 +49,7 @@ class GameMap:
     resources: Dict[str, int]
     display_build_button: bool
 
-    def __init__(self, size: int, width: int, height: int) -> None:
-        self.width = width
-        self.height = height
-        self.size = size
+    def __init__(self) -> None:
         self.x_offset = 0
         self.y_offset = 0
         self.zoom = 1
@@ -65,10 +58,10 @@ class GameMap:
         self.all_ships = {'neutral': [], 'player': [], 'pirate': []}
         self.selected_ships = []
         self.bullets = []
-        self.update_target_time = update_target_total_time
+        self.update_target_time = constants.UPDATE_TARGET_TIME
         self.resources = {'alloy': 10, 'crystal': 10, 'scrap': 0}
         self.display_build_button = False
-        if test_env:
+        if constants.TEST_ENV:
             self.create_space_object('asteroid', (700, 700))
             self.create_space_object('corvette', (500, 500))
             self.create_space_object('corvette', (300, 600))
@@ -90,7 +83,7 @@ class GameMap:
             self.create_space_object('hammerhead', (300, 1500))
             self.create_space_object('hammerhead', (100, 1600))
             for _ in range(10):
-                self.create_space_object('asteroid', (randint(0, self.size), randint(0, self.size)))
+                self.create_space_object('asteroid', (randint(0, constants.GAME_MAP_SIZE), randint(0, constants.GAME_MAP_SIZE)))
 
     def pan(self, motion: Tuple[int, int]) -> None:
         self.x_offset += motion[0]//self.zoom
@@ -98,9 +91,9 @@ class GameMap:
 
     def change_zoom(self, i: float):
         if round(self.zoom + i) != 0.0:
-            old_center = self.screen_to_true((self.width//2, self.height//2))
+            old_center = self.screen_to_true((constants.SCREEN_WIDTH//2, constants.SCREEN_HEIGHT//2))
             self.zoom += i
-            new_center = self.screen_to_true((self.width//2, self.height//2))
+            new_center = self.screen_to_true((constants.SCREEN_WIDTH//2, constants.SCREEN_HEIGHT//2))
             self.pan((new_center[0] - old_center[0], new_center[1] - old_center[1]))
 
     def true_to_screen(self, point: Tuple[int, int]) -> Tuple[int, int]:
@@ -185,7 +178,7 @@ class GameMap:
         self.update_target_time -= 1
         if self.update_target_time == 0:
             self.update_targets()
-            self.update_target_time = update_target_total_time
+            self.update_target_time = constants.UPDATE_TARGET_TIME
 
         for bullet in self.bullets:
             bullet.update()
@@ -228,12 +221,12 @@ class GameMap:
                         x = ship2.position[0] - ship1.position[0]
                         y = ship2.position[1] - ship1.position[1]
                         distance = hypot(x, y)
-                        if distance < short_range:
+                        if distance < constants.SHORT_RANGE:
                             if ship1.faction != 'neutral':
                                 ship1.close_targets.append((atan2(y, x)))
                             if ship2.faction != 'neutral':
                                 ship2.close_targets.append((atan2(-y, -x)))
-                        if distance < medium_range:
+                        if distance < constants.MEDIUM_RANGE:
                             if ship1.faction != 'neutral':
                                 ship1.medium_targets.append((atan2(y, x)))
                                 ship1.close_ships[distance] = ship2

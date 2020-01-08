@@ -1,4 +1,5 @@
 import pygame
+import constants
 from model.game_map import GameMap
 from typing import Tuple, Any, List
 from model.spaceship import StarShip, Miner
@@ -6,7 +7,7 @@ from pathlib import Path
 import os
 
 
-class Visualiser:
+class GameView:
     """Visualiser for the game
     width:
         width of the screen
@@ -27,27 +28,21 @@ class Visualiser:
     number_sprites:
         sprites of all the numbers
     """
-    width: int
-    height: int
     screen: pygame.Surface
     highlight_screen: pygame.Surface
     game_map: GameMap
-    cell_size: int
     effects: List[Tuple[str, Any]]
     #resource_icons: Dict[pygame.image]
     repair_icon: pygame.image
     #number_sprites: List[pygame.image]
 
-    def __init__(self, window_width: int, window_height: int, game_map: GameMap, cell_size: int) -> None:
-        self.width = window_width
-        self.height = window_height
-        self.screen = pygame.display.set_mode((window_width, window_height))
-        self.highlight_screen = pygame.Surface((window_width, window_height))
+    def __init__(self, game_map: GameMap) -> None:
+        self.screen = pygame.display.set_mode((constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT))
+        self.highlight_screen = pygame.Surface((constants.SCREEN_WIDTH, constants.SCREEN_HEIGHT))
         self.highlight_screen.set_colorkey((0, 0, 0))
         self.highlight_screen.set_alpha(100)
         self.highlight_screen.convert()
         self.game_map = game_map
-        self.cell_size = cell_size
         self.effects = []
 
         images_path = os.path.join(Path(os.path.dirname(__file__)).parent, 'images')
@@ -71,11 +66,11 @@ class Visualiser:
 
         # Draw grid
         distance = 200
-        for i in range(self.game_map.size//distance):
+        for i in range(constants.GAME_MAP_SIZE//distance):
             pygame.draw.line(self.screen, (255, 255, 255), self.game_map.true_to_screen((i * distance, 0)),
-                             self.game_map.true_to_screen((i * distance, self.game_map.size-distance)))
+                             self.game_map.true_to_screen((i * distance, constants.GAME_MAP_SIZE-distance)))
             pygame.draw.line(self.screen, (255, 255, 255), self.game_map.true_to_screen((0, i * distance)),
-                             self.game_map.true_to_screen((self.game_map.size-distance, i * distance)))
+                             self.game_map.true_to_screen((constants.GAME_MAP_SIZE-distance, i * distance)))
 
         self.draw_objects()
         self.draw_bullets()
@@ -90,8 +85,8 @@ class Visualiser:
         y_offset = self.game_map.y_offset
         zoom = self.game_map.zoom
         for space_object in self.game_map.space_objects:
-            if (-x_offset <= space_object.position[0] <= -x_offset + self.width/zoom) and \
-                    (-y_offset <= space_object.position[1] <= -y_offset + self.height/zoom):
+            if (-x_offset <= space_object.position[0] <= -x_offset + constants.SCREEN_WIDTH/zoom) and \
+                    (-y_offset <= space_object.position[1] <= -y_offset + constants.SCREEN_HEIGHT/zoom):
                 body = space_object.body
                 if space_object.faction == 'player':
                     hull_colour = (75, 75, 255)
@@ -110,8 +105,8 @@ class Visualiser:
                         armor_colour = (45, 45, 45)
                         turret_colour = (30, 30, 30)
 
-                top_left_point = self.cell_size * (-len(body[0]) / 2), self.cell_size * (-len(body) / 2)
-                top_second_left_point = self.cell_size * (-len(body[0]) / 2) + self.cell_size, self.cell_size * (-len(body) / 2)
+                top_left_point = constants.CELL_SIZE * (-len(body[0]) / 2), constants.CELL_SIZE * (-len(body) / 2)
+                top_second_left_point = constants.CELL_SIZE * (-len(body[0]) / 2) + constants.CELL_SIZE, constants.CELL_SIZE * (-len(body) / 2)
                 point1 = self.game_map.true_to_screen_float(space_object.ship_to_true(top_left_point))
                 point2 = self.game_map.true_to_screen_float(space_object.ship_to_true(top_second_left_point))
                 x_difference = point2[0] - point1[0]
@@ -169,8 +164,8 @@ class Visualiser:
         x_offset = self.game_map.x_offset
         y_offset = self.game_map.y_offset
         for bullet in self.game_map.bullets:
-            if (-x_offset <= bullet.position[0] <= -x_offset + self.width / zoom) and \
-                    (-y_offset <= bullet.position[1] <= -y_offset + self.height / zoom):
+            if (-x_offset <= bullet.position[0] <= -x_offset + constants.SCREEN_WIDTH / zoom) and \
+                    (-y_offset <= bullet.position[1] <= -y_offset + constants.SCREEN_HEIGHT / zoom):
                 if bullet.faction == 'player':
                     bullet_colour = (0, 70, 112)
                 elif bullet.faction == 'pirate':
@@ -205,7 +200,7 @@ class Visualiser:
             self.screen.blit(self.highlight_screen, (0, 0))
 
     def draw_hud(self) -> None:
-        center = self.width//2
+        center = constants.SCREEN_WIDTH//2
         pygame.draw.polygon(self.screen, (0, 153, 51), [(center - 300, 0), (center + 300, 0),
                                                         (center + 270, 30), (center - 270, 30)])
         # Draw alloy icon and amount
@@ -231,8 +226,8 @@ class Visualiser:
                     if resource not in resource_cost:
                         resource_cost[resource] = 0
                     resource_cost[resource] += ship.repair_cost[resource]
-            pygame.draw.rect(self.screen, (0, 153, 51), (0, self.height-100, len(resource_cost)*80, 100))
-            y = self.height-30
+            pygame.draw.rect(self.screen, (0, 153, 51), (0, constants.SCREEN_HEIGHT-100, len(resource_cost)*80, 100))
+            y = constants.SCREEN_HEIGHT-30
             x = 0
             for resource in resource_cost:
                 # Draw resource icon and amount

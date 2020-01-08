@@ -1,3 +1,4 @@
+import constants
 from model.game_map import GameMap
 from model.spaceship import StarShip
 from typing import List
@@ -54,8 +55,8 @@ class PodManager:
 
         if self.target is None:
             if all(ship.destination is None for ship in self.star_ships):
-                new_destination_x = randint(50, self.game_map.size-50)
-                new_destination_y = randint(50, self.game_map.size-50)
+                new_destination_x = randint(50, constants.GAME_MAP_SIZE-50)
+                new_destination_y = randint(50, constants.GAME_MAP_SIZE-50)
                 for ship in self.star_ships:
                     x = randint(-200, 200)
                     y = randint(-200, 200)

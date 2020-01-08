@@ -1,10 +1,19 @@
 import pygame
-from viewcontroller.visualiser import Visualiser
+import constants
+from viewcontroller.game_view import GameView
 from model.game_map import GameMap
-from viewcontroller.enemy_ai import PodManager
+from model.enemy_ai import PodManager
 import time
 
-test_env = False
+
+class Application:
+    """SpaceCells game controller
+    """
+
+    def __init__(self):
+        pygame.init()
+        self.game_running = True
+        self.game_map = GameMap()
 
 
 def game_loop():
@@ -15,9 +24,9 @@ def game_loop():
     """
     pygame.init()
     game_running = True
-    game_map = GameMap(2000, 1600, 900)
-    visualiser = Visualiser(1600, 900, game_map, 10)
-    if test_env:
+    game_map = GameMap()
+    visualiser = GameView(game_map)
+    if constants.TEST_ENV:
         pods = []
     else:
         pods = [PodManager(game_map, game_map.all_ships['pirate'][0:3]),
