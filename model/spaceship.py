@@ -316,7 +316,7 @@ class Battleship(StarShip):
         if self.close_targets:
             for turret_pos in self.turrets:
                 self.turrets[turret_pos] -= 1
-                if self.turrets[turret_pos] == 0:
+                if self.turrets[turret_pos] <= 0:
                     position = self.ship_to_true(
                         (int(cell_size * (turret_pos[0] - len(self.body[0]) / 2) + cell_size // 2),
                          int(cell_size * (turret_pos[1] - len(self.body) / 2) + cell_size // 2)))
